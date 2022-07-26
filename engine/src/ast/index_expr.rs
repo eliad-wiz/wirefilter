@@ -94,7 +94,7 @@ impl<'s> ValueExpr<'s> for IndexExpr<'s> {
                 LhsFieldExpr::Field(f) => CompiledValueExpr::new(move |ctx| {
                     indexes[..last]
                         .iter()
-                        .fold(Some(ctx.get_field_value_unchecked(f)), |value, index| {
+                        .fold(ctx.get_field_value(f), |value, index| {
                             value.and_then(|val| val.get(index).unwrap())
                         })
                         .map(LhsValue::as_ref)
@@ -118,7 +118,11 @@ impl<'s> ValueExpr<'s> for IndexExpr<'s> {
             match lhs {
                 LhsFieldExpr::Field(f) => CompiledValueExpr::new(move |ctx| {
                     let mut iter = MapEachIterator::from_indexes(&indexes[..]);
-                    iter.reset(ctx.get_field_value_unchecked(f).as_ref());
+                    let value = match ctx.get_field_value(f) {
+                        Some(value) => value,
+                        None => return Err(f.get_type()),
+                    };
+                    iter.reset(value.as_ref());
                     let mut arr = Array::new(ty.clone());
                     arr.extend(iter);
                     Ok(LhsValue::Array(arr))
@@ -178,16 +182,13 @@ impl<'s> IndexExpr<'s> {
             }
             LhsFieldExpr::Field(f) => {
                 if indexes.is_empty() {
-                    CompiledOneExpr::new(move |ctx| func(ctx.get_field_value_unchecked(f), ctx))
+                    CompiledOneExpr::new(move |ctx| match ctx.get_field_value(f) {
+                        Some(value) => func(value, ctx),
+                        None => false,
+                    })
                 } else {
                     CompiledOneExpr::new(move |ctx| {
-                        index_access_one!(
-                            indexes,
-                            Some(ctx.get_field_value_unchecked(f)),
-                            default,
-                            ctx,
-                            func
-                        )
+                        index_access_one!(indexes, ctx.get_field_value(f), default, ctx, func)
                     })
                 }
             }
@@ -212,7 +213,7 @@ impl<'s> IndexExpr<'s> {
                 })
             }
             LhsFieldExpr::Field(f) => CompiledVecExpr::new(move |ctx| {
-                index_access_vec!(indexes, Some(ctx.get_field_value_unchecked(f)), ctx, func)
+                index_access_vec!(indexes, ctx.get_field_value(f), ctx, func)
             }),
         }
     }
@@ -229,9 +230,15 @@ impl<'s> IndexExpr<'s> {
         match lhs {
             LhsFieldExpr::Field(f) => CompiledVecExpr::new(move |ctx| {
                 let mut iter = MapEachIterator::from_indexes(&indexes[..]);
-                iter.reset(ctx.get_field_value_unchecked(f).as_ref());
 
                 let mut output = Vec::new();
+                let value = match ctx.get_field_value(f) {
+                    Some(v) => v,
+                    None => return output.into_boxed_slice(),
+                };
+
+                iter.reset(value.as_ref());
+
                 for item in iter {
                     output.push(func(&item, ctx));
                 }

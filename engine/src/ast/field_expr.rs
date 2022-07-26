@@ -209,9 +209,13 @@ impl<'s> LhsFieldExpr<'s> {
         compiler: &mut C,
     ) -> CompiledValueExpr<'s, U> {
         match self {
-            LhsFieldExpr::Field(f) => {
-                CompiledValueExpr::new(move |ctx| Ok(ctx.get_field_value_unchecked(f).as_ref()))
-            }
+            LhsFieldExpr::Field(f) => CompiledValueExpr::new(move |ctx| {
+                let value = ctx.get_field_value(f);
+                match value {
+                    Some(value) => Ok(value.as_ref()),
+                    None => Err(f.get_type()),
+                }
+            }),
             LhsFieldExpr::FunctionCallExpr(call) => compiler.compile_function_call_expr(call),
         }
     }
