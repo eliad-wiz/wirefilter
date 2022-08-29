@@ -475,7 +475,7 @@ mod tests {
           1 | 300.0.0.1
             | ^-------^
             |
-            = invalid IP address syntax"
+            = invalid IPv4 address syntax"
         }
     }
 
@@ -497,7 +497,7 @@ mod tests {
           1 | 2001:dz8::1
             | ^---------^
             |
-            = invalid IP address syntax"
+            = invalid IPv6 address syntax"
         }
     }
 
@@ -604,7 +604,7 @@ mod tests {
           1 | 2001:db8::1..2001:dz8::ff
             |              ^----------^
             |
-            = invalid IP address syntax"
+            = invalid IPv6 address syntax"
         }
 
         err! { ipv6_range "2001:db8::ff..2001:db8::11" =>
