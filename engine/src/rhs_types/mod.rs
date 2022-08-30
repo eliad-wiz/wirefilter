@@ -6,6 +6,7 @@ mod ip;
 mod list;
 mod map;
 mod regex;
+mod ulong;
 mod wildcard;
 
 pub use self::{
@@ -17,5 +18,6 @@ pub use self::{
     list::ListName,
     map::UninhabitedMap,
     regex::{Error as RegexError, Regex, RegexFormat},
+    ulong::UlongRange,
     wildcard::{Wildcard, WildcardError},
 };

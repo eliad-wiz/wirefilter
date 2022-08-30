@@ -44,6 +44,7 @@ pub enum CPrimitiveType {
     Bytes = 2u8,
     Int = 3u8,
     Bool = 4u8,
+    Ulong = 5u8,
 }
 
 enum Layer {
@@ -97,6 +98,7 @@ impl From<CType> for Type {
                 CPrimitiveType::Bool => Type::Bool,
                 CPrimitiveType::Bytes => Type::Bytes,
                 CPrimitiveType::Int => Type::Int,
+                CPrimitiveType::Ulong => Type::Ulong,
                 CPrimitiveType::Ip => Type::Ip,
             },
         }
@@ -120,6 +122,11 @@ impl From<Type> for CType {
                 len: 0,
                 layers: 0,
                 primitive: CPrimitiveType::Int.into(),
+            },
+            Type::Ulong => CType {
+                len: 0,
+                layers: 0,
+                primitive: CPrimitiveType::Ulong.into(),
             },
             Type::Bool => CType {
                 len: 0,
@@ -566,6 +573,23 @@ pub extern "C" fn wirefilter_add_int_value_to_execution_context(
         Ok(f) => f,
         Err(_) => return false,
     };
+    // int used to be don't break backward compatibility
+    exec_context.set_field_value(field, value).is_ok()
+}
+
+#[no_mangle]
+pub extern "C" fn wirefilter_add_ulong_value_to_execution_context(
+    exec_context: &mut ExecutionContext<'_>,
+    name_ptr: *const c_char,
+    name_len: usize,
+    value: u64,
+) -> bool {
+    let name = to_str!(name_ptr, name_len);
+    let field = match exec_context.scheme().get_field(name) {
+        Ok(f) => f,
+        Err(_) => return false,
+    };
+    // int used to be don't break backward compatibility
     exec_context.set_field_value(field, value).is_ok()
 }
 
@@ -1082,6 +1106,9 @@ mod ffi_test {
         add_field!(scheme, "num1", Type::Int);
         add_field!(scheme, "num2", Type::Int);
 
+        add_field!(scheme, "ulong1", Type::Ulong);
+        add_field!(scheme, "ulong2", Type::Ulong);
+
         add_field!(scheme, "map1", wirefilter_create_map_type(Type::Int.into()));
         add_field!(
             scheme,
@@ -1155,6 +1182,22 @@ mod ffi_test {
             field.len(),
             1337,
         ));
+
+        let field = "ulong1";
+        wirefilter_add_ulong_value_to_execution_context(
+            &mut exec_context,
+            field.as_ptr().cast(),
+            field.len(),
+            42,
+        );
+
+        let field = "ulong2";
+        wirefilter_add_ulong_value_to_execution_context(
+            &mut exec_context,
+            field.as_ptr().cast(),
+            field.len(),
+            0x1337_1337_1337,
+        );
 
         let mut map1 = wirefilter_create_map(Type::Int.into());
 
@@ -1323,6 +1366,14 @@ mod ffi_test {
                 MatchingResult::MATCHED
             );
 
+            assert_eq!(
+                match_filter(
+                    r#"ulong1 == 42 && ulong2 == 0x133713371337 && (num2 & 0xffff)"#,
+                    &scheme,
+                    &exec_context
+                ),
+                MatchingResult::MATCHED
+            );
             assert_eq!(
                 match_filter(
                     r#"ip2 == 0:0:0:0:0:ffff:c0a8:1 && (str1 == "Hey" || str2 == "ya") && (map1["key"] == 42 || map2["key2"] == "value")"#,

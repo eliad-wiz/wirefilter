@@ -1,7 +1,9 @@
 use crate::{
     lex::{expect, skip_space, Lex, LexResult, LexWith},
     lhs_types::{Array, ArrayIterator, ArrayMut, Map, MapIter, MapMut, MapValuesIntoIter},
-    rhs_types::{Bytes, IntRange, IpRange, UninhabitedArray, UninhabitedBool, UninhabitedMap},
+    rhs_types::{
+        Bytes, IntRange, IpRange, UlongRange, UninhabitedArray, UninhabitedBool, UninhabitedMap,
+    },
     scheme::{FieldIndex, IndexAccessError},
     strict_partial_ord::StrictPartialOrd,
 };
@@ -398,6 +400,7 @@ impl std::fmt::Display for Type {
             Self::Bool => write!(f, "Bool"),
             Self::Bytes => write!(f, "Bytes"),
             Self::Int => write!(f, "Int"),
+            Self::Ulong => write!(f, "Ulong"),
             Self::Ip => write!(f, "Ip"),
             Self::Array(ty) => write!(f, "Array({})", Type::from(*ty)),
             Self::Map(ty) => write!(f, "Map({})", Type::from(*ty)),
@@ -468,6 +471,7 @@ mod private {
     impl SealedIntoValue for i32 {}
     impl SealedIntoValue for u32 {}
     impl SealedIntoValue for i64 {}
+    impl SealedIntoValue for u64 {}
 
     impl SealedIntoValue for &[u8] {}
     impl SealedIntoValue for Box<[u8]> {}
@@ -555,6 +559,15 @@ impl<'a> IntoValue<'a> for u8 {
     #[inline]
     fn into_value(self) -> LhsValue<'a> {
         LhsValue::Int(i64::from(self))
+    }
+}
+
+impl<'a> IntoValue<'a> for u64 {
+    const TYPE: Type = Type::Ulong;
+
+    #[inline]
+    fn into_value(self) -> LhsValue<'a> {
+        LhsValue::Ulong(u64::from(self))
     }
 }
 
@@ -707,6 +720,7 @@ impl<'a> From<&'a RhsValue> for LhsValue<'a> {
             RhsValue::Ip(ip) => LhsValue::Ip(*ip),
             RhsValue::Bytes(bytes) => LhsValue::Bytes(Cow::Borrowed(bytes)),
             RhsValue::Int(integer) => LhsValue::Int(*integer),
+            RhsValue::Ulong(integer) => LhsValue::Ulong(*integer),
             RhsValue::Bool(b) => match *b {},
             RhsValue::Array(a) => match *a {},
             RhsValue::Map(m) => match *m {},
@@ -720,6 +734,7 @@ impl From<RhsValue> for LhsValue<'_> {
             RhsValue::Ip(ip) => LhsValue::Ip(ip),
             RhsValue::Bytes(bytes) => LhsValue::Bytes(Cow::Owned(bytes.into())),
             RhsValue::Int(integer) => LhsValue::Int(integer),
+            RhsValue::Ulong(integer) => LhsValue::Ulong(integer),
             RhsValue::Bool(b) => match b {},
             RhsValue::Array(a) => match a {},
             RhsValue::Map(m) => match m {},
@@ -735,6 +750,7 @@ impl<'a> LhsValue<'a> {
             LhsValue::Ip(ip) => LhsValue::Ip(*ip),
             LhsValue::Bytes(bytes) => LhsValue::Bytes(Cow::Borrowed(bytes)),
             LhsValue::Int(integer) => LhsValue::Int(*integer),
+            LhsValue::Ulong(integer) => LhsValue::Ulong(*integer),
             LhsValue::Bool(b) => LhsValue::Bool(*b),
             LhsValue::Array(a) => LhsValue::Array(a.as_ref()),
             LhsValue::Map(m) => LhsValue::Map(m.as_ref()),
@@ -747,6 +763,7 @@ impl<'a> LhsValue<'a> {
             LhsValue::Ip(ip) => LhsValue::Ip(ip),
             LhsValue::Bytes(bytes) => LhsValue::Bytes(Cow::Owned(bytes.into_owned())),
             LhsValue::Int(i) => LhsValue::Int(i),
+            LhsValue::Ulong(i) => LhsValue::Ulong(i),
             LhsValue::Bool(b) => LhsValue::Bool(b),
             LhsValue::Array(arr) => LhsValue::Array(arr.into_owned()),
             LhsValue::Map(map) => LhsValue::Map(map.into_owned()),
@@ -865,6 +882,7 @@ impl Serialize for LhsValue<'_> {
                 }
             }
             LhsValue::Int(num) => num.serialize(serializer),
+            LhsValue::Ulong(num) => num.serialize(serializer),
             LhsValue::Bool(b) => b.serialize(serializer),
             LhsValue::Array(arr) => arr.serialize(serializer),
             LhsValue::Map(map) => map.serialize(serializer),
@@ -884,6 +902,7 @@ impl<'de> DeserializeSeed<'de> for LhsValueSeed<'_> {
         match self.0 {
             Type::Ip => Ok(LhsValue::Ip(std::net::IpAddr::deserialize(deserializer)?)),
             Type::Int => Ok(LhsValue::Int(i64::deserialize(deserializer)?)),
+            Type::Ulong => Ok(LhsValue::Ulong(u64::deserialize(deserializer)?)),
             Type::Bool => Ok(LhsValue::Bool(bool::deserialize(deserializer)?)),
             Type::Bytes => Ok(LhsValue::Bytes(
                 BytesOrString::deserialize(deserializer)?.into_bytes(),
@@ -977,6 +996,7 @@ enum PrimitiveType {
     Bool,
     Bytes,
     Int,
+    Ulong,
     Ip,
 }
 
@@ -1032,6 +1052,7 @@ impl CompoundType {
             Type::Bool => Some(Self::new(PrimitiveType::Bool)),
             Type::Bytes => Some(Self::new(PrimitiveType::Bytes)),
             Type::Int => Some(Self::new(PrimitiveType::Int)),
+            Type::Ulong => Some(Self::new(PrimitiveType::Ulong)),
             Type::Ip => Some(Self::new(PrimitiveType::Ip)),
             Type::Array(ty) => ty.push(Layer::Array),
             Type::Map(ty) => ty.push(Layer::Map),
@@ -1052,6 +1073,7 @@ impl CompoundType {
                 PrimitiveType::Bool => Type::Bool,
                 PrimitiveType::Bytes => Type::Bytes,
                 PrimitiveType::Int => Type::Int,
+                PrimitiveType::Ulong => Type::Ulong,
                 PrimitiveType::Ip => Type::Ip,
             },
         }
@@ -1118,6 +1140,9 @@ declare_types!(
     /// A 64-bit integer number.
     Int(i64 | i64 | IntRange),
 
+    /// A 64-bit unsigned integer number
+    Ulong(u64 | u64 | UlongRange),
+
     /// An IPv4 or IPv6 address.
     ///
     /// These are represented as a single type to allow interop comparisons.
@@ -1142,8 +1167,10 @@ declare_types!(
 pub enum LhsValueMut<'a, 'b> {
     /// A mutable boolean.
     Bool(&'a mut bool),
-    /// A mutable 32-bit integer number.
+    /// A mutable 64-bit integer number.
     Int(&'a mut i64),
+    /// A mutable 64-bit unsigned integer number.
+    Ulong(&'a mut u64),
     /// A mutable IPv4 or IPv6 address.
     Ip(&'a mut IpAddr),
     /// A mutable byte string.
@@ -1160,6 +1187,7 @@ impl<'a, 'b> From<&'a mut LhsValue<'b>> for LhsValueMut<'a, 'b> {
         match value {
             LhsValue::Bool(b) => LhsValueMut::Bool(b),
             LhsValue::Int(i) => LhsValueMut::Int(i),
+            LhsValue::Ulong(i) => LhsValueMut::Ulong(i),
             LhsValue::Ip(ip) => LhsValueMut::Ip(ip),
             LhsValue::Bytes(b) => LhsValueMut::Bytes(b),
             LhsValue::Array(arr) => LhsValueMut::Array(arr.into()),

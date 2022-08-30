@@ -20,6 +20,7 @@ enum wirefilter_primitive_type
   WIREFILTER_PRIMITIVE_TYPE_BYTES = 2,
   WIREFILTER_PRIMITIVE_TYPE_INT = 3,
   WIREFILTER_PRIMITIVE_TYPE_BOOL = 4,
+  WIREFILTER_PRIMITIVE_TYPE_ULONG = 5,
 };
 #ifndef __cplusplus
 typedef uint8_t wirefilter_primitive_type;
@@ -177,6 +178,11 @@ bool wirefilter_add_int_value_to_execution_context(struct wirefilter_execution_c
                                                    const char *name_ptr,
                                                    size_t name_len,
                                                    int64_t value);
+
+bool wirefilter_add_ulong_value_to_execution_context(struct wirefilter_execution_context *exec_context,
+                                                     const char *name_ptr,
+                                                     size_t name_len,
+                                                     uint64_t value);
 
 bool wirefilter_add_bytes_value_to_execution_context(struct wirefilter_execution_context *exec_context,
                                                      const char *name_ptr,

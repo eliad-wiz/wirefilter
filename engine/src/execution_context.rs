@@ -381,6 +381,7 @@ fn test_serde() {
     scheme.add_field("num", Type::Int).unwrap();
     scheme.add_field("min_num", Type::Int).unwrap();
     scheme.add_field("max_num", Type::Int).unwrap();
+    scheme.add_field("ulong", Type::Ulong).unwrap();
     scheme
         .add_field("arr", Type::Array(Type::Bool.into()))
         .unwrap();
@@ -428,6 +429,11 @@ fn test_serde() {
     );
 
     assert_eq!(
+        ctx.set_field_value(scheme.get_field("ulong").unwrap(), 0x1_0000_0000u64),
+        Ok(None),
+    );
+
+    assert_eq!(
         ctx.set_field_value(scheme.get_field("arr").unwrap(), {
             Array::from_iter([false, true])
         }),
@@ -454,6 +460,7 @@ fn test_serde() {
             "num": 42,
             "min_num": i64::MIN,
             "max_num": i64::MAX,
+            "ulong": 0x1_0000_0000u64,
             "arr": [false, true],
             "map": {
                 "leet": 1337,
@@ -504,6 +511,7 @@ fn test_serde() {
             "num": 42,
             "min_num": i64::MIN,
             "max_num": i64::MAX,
+            "ulong": 0x1_0000_0000u64,
             "arr": [false, true],
             "map": [
                 [[97, 255, 255, 98], 17],

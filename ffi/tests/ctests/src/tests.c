@@ -14,6 +14,7 @@ extern void rust_assert(bool check, const char *msg);
 #define WIREFILTER_TYPE_IP (wirefilter_create_primitive_type(WIREFILTER_PRIMITIVE_TYPE_IP))
 #define WIREFILTER_TYPE_BOOL (wirefilter_create_primitive_type(WIREFILTER_PRIMITIVE_TYPE_BOOL))
 #define WIREFILTER_TYPE_INT (wirefilter_create_primitive_type(WIREFILTER_PRIMITIVE_TYPE_INT))
+#define WIREFILTER_TYPE_ULONG (wirefilter_create_primitive_type(WIREFILTER_PRIMITIVE_TYPE_ULONG))
 
 void initialize_scheme(struct wirefilter_scheme *scheme) {
     rust_assert(wirefilter_add_type_field_to_scheme(
@@ -41,6 +42,11 @@ void initialize_scheme(struct wirefilter_scheme *scheme) {
         STRING("tcp.port"),
         WIREFILTER_TYPE_INT
     ), "could not add field tcp.port of type \"Int\" to scheme");
+    rust_assert(wirefilter_add_type_field_to_scheme(
+        scheme,
+        STRING("timestamp"),
+        WIREFILTER_TYPE_ULONG
+    ), "could not add field timestamp of type \"Ulong\" to scheme");
     wirefilter_add_type_field_to_scheme(
         scheme,
         STRING("http.headers"),
@@ -311,7 +317,7 @@ void wirefilter_ffi_ctest_scheme_serialize() {
     rust_assert(json.ptr != NULL && json.len > 0, "could not serialize scheme to JSON");
 
     rust_assert(
-        strncmp(json.ptr, "{\"http.host\":\"Bytes\",\"ip.src\":\"Ip\",\"ip.dst\":\"Ip\",\"ssl\":\"Bool\",\"tcp.port\":\"Int\",\"http.headers\":{\"Map\":\"Bytes\"},\"http.cookies\":{\"Array\":\"Bytes\"}}", json.len) == 0,
+        strncmp(json.ptr, "{\"http.host\":\"Bytes\",\"ip.src\":\"Ip\",\"ip.dst\":\"Ip\",\"ssl\":\"Bool\",\"tcp.port\":\"Int\",\"timestamp\":\"Ulong\",\"http.headers\":{\"Map\":\"Bytes\"},\"http.cookies\":{\"Array\":\"Bytes\"}}", json.len) == 0,
         "invalid JSON serialization"
     );
 
@@ -427,6 +433,12 @@ void wirefilter_ffi_ctest_add_values_to_execution_context() {
         80
     ) == true, "could not set value for field tcp.port");
 
+    rust_assert(wirefilter_add_ulong_value_to_execution_context(
+        exec_ctx,
+        STRING("timestamp"),
+        0xff11223344ULL
+    ) == true, "could not set value for field timestamp");
+
     wirefilter_free_execution_context(exec_ctx);
 
     wirefilter_free_scheme(scheme);
@@ -468,6 +480,12 @@ void wirefilter_ffi_ctest_add_values_to_execution_context_errors() {
     ) == false, "managed to set value for non-existent bool field");
 
     rust_assert(wirefilter_add_int_value_to_execution_context(
+        exec_ctx,
+        STRING("doesnotexist"),
+        80
+    ) == false, "managed to set value for non-existent int field");
+
+    rust_assert(wirefilter_add_ulong_value_to_execution_context(
         exec_ctx,
         STRING("doesnotexist"),
         80
@@ -538,13 +556,19 @@ void wirefilter_ffi_ctest_execution_context_serialize() {
         80
     ) == true, "could not set value for field tcp.port");
 
+    rust_assert(wirefilter_add_ulong_value_to_execution_context(
+        exec_ctx,
+        STRING("timestamp"),
+        0xff11223344ULL
+    ) == true, "could not set value for field timestamp");
+
     struct wirefilter_serializing_result serializing_result = wirefilter_serialize_execution_context_to_json(exec_ctx);
     rust_assert(serializing_result.status == WIREFILTER_STATUS_SUCCESS, "could not serialize execution context to JSON");
 
     struct wirefilter_rust_allocated_str json = serializing_result.json;
     rust_assert(json.ptr != NULL && json.len > 0, "could not serialize execution context to JSON");
 
-    const char *expected = "{\"http.host\":\"www.cloudflare.com\",\"ip.src\":\"192.168.0.1\",\"ip.dst\":\"2606:4700:4700::1111\",\"ssl\":false,\"tcp.port\":80,\"$lists\":[]}";
+    const char *expected = "{\"http.host\":\"www.cloudflare.com\",\"ip.src\":\"192.168.0.1\",\"ip.dst\":\"2606:4700:4700::1111\",\"ssl\":false,\"tcp.port\":80,\"timestamp\":1095504114500,\"$lists\":[]}";
 
     rust_assert(json.len == strlen(expected), "invalid JSON serialization");
 
@@ -663,6 +687,12 @@ void wirefilter_ffi_ctest_match_filter() {
         80
     );
 
+    wirefilter_add_ulong_value_to_execution_context(
+        exec_ctx,
+        STRING("timestamp"),
+        80
+    );
+
     struct wirefilter_matching_result matching_result = wirefilter_match(filter, exec_ctx);
     rust_assert(matching_result.status == WIREFILTER_STATUS_SUCCESS, "could not match filter");
 
@@ -718,6 +748,12 @@ void wirefilter_ffi_ctest_match_map() {
     wirefilter_add_int_value_to_execution_context(
         exec_ctx,
         STRING("tcp.port"),
+        80
+    );
+
+    wirefilter_add_ulong_value_to_execution_context(
+        exec_ctx,
+        STRING("timestamp"),
         80
     );
 
@@ -792,6 +828,12 @@ void wirefilter_ffi_ctest_match_array() {
     wirefilter_add_int_value_to_execution_context(
         exec_ctx,
         STRING("tcp.port"),
+        80
+    );
+
+    wirefilter_add_ulong_value_to_execution_context(
+        exec_ctx,
+        STRING("timestamp"),
         80
     );
 
