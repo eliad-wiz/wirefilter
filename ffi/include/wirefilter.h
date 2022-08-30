@@ -107,6 +107,7 @@ typedef enum {
     WIREFILTER_TYPE_TAG_BOOL,
     WIREFILTER_TYPE_TAG_ARRAY,
     WIREFILTER_TYPE_TAG_MAP,
+    WIREFILTER_TYPE_TAG_ULONG,
 } wirefilter_type_tag_t;
 
 typedef struct {
@@ -118,6 +119,7 @@ static const wirefilter_type_t WIREFILTER_TYPE_IP = {.tag = WIREFILTER_TYPE_TAG_
 static const wirefilter_type_t WIREFILTER_TYPE_BYTES = {.tag = WIREFILTER_TYPE_TAG_BYTES, .data = NULL};
 static const wirefilter_type_t WIREFILTER_TYPE_INT = {.tag = WIREFILTER_TYPE_TAG_INT, .data = NULL};
 static const wirefilter_type_t WIREFILTER_TYPE_BOOL = {.tag = WIREFILTER_TYPE_TAG_BOOL, .data = NULL};
+static const wirefilter_type_t WIREFILTER_TYPE_ULONG = {.tag = WIREFILTER_TYPE_TAG_ULONG, .data = NULL};
 
 typedef enum {
     WIREFILTER_PANIC_CATCHER_FALLBACK_MODE_CONTINUE = 0,
@@ -178,6 +180,12 @@ bool wirefilter_add_int_value_to_execution_context(
     wirefilter_execution_context_t *exec_ctx,
     wirefilter_externally_allocated_str_t name,
     int32_t value
+);
+
+bool wirefilter_add_ulong_value_to_execution_context(
+    wirefilter_execution_context_t *exec_ctx,
+    wirefilter_externally_allocated_str_t name,
+    uint64_t value
 );
 
 bool wirefilter_add_bytes_value_to_execution_context(

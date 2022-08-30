@@ -1,7 +1,9 @@
 use crate::{
     lex::{expect, skip_space, Lex, LexResult, LexWith},
     lhs_types::{Array, ArrayIterator, Map, MapIter, MapValuesIntoIter},
-    rhs_types::{Bytes, IntRange, IpRange, UninhabitedArray, UninhabitedBool, UninhabitedMap},
+    rhs_types::{
+        Bytes, IntRange, IpRange, UlongRange, UninhabitedArray, UninhabitedBool, UninhabitedMap,
+    },
     scheme::{FieldIndex, IndexAccessError},
     strict_partial_ord::StrictPartialOrd,
 };
@@ -414,6 +416,7 @@ impl<'a> From<&'a RhsValue> for LhsValue<'a> {
             RhsValue::Ip(ip) => LhsValue::Ip(*ip),
             RhsValue::Bytes(bytes) => LhsValue::Bytes(Cow::Borrowed(bytes)),
             RhsValue::Int(integer) => LhsValue::Int(*integer),
+            RhsValue::Ulong(integer) => LhsValue::Ulong(*integer),
             RhsValue::Bool(b) => match *b {},
             RhsValue::Array(a) => match *a {},
             RhsValue::Map(m) => match *m {},
@@ -427,6 +430,7 @@ impl<'a> From<RhsValue> for LhsValue<'a> {
             RhsValue::Ip(ip) => LhsValue::Ip(ip),
             RhsValue::Bytes(bytes) => LhsValue::Bytes(Cow::Owned(bytes.into())),
             RhsValue::Int(integer) => LhsValue::Int(integer),
+            RhsValue::Ulong(integer) => LhsValue::Ulong(integer),
             RhsValue::Bool(b) => match b {},
             RhsValue::Array(a) => match a {},
             RhsValue::Map(m) => match m {},
@@ -442,6 +446,7 @@ impl<'a> LhsValue<'a> {
             LhsValue::Ip(ip) => LhsValue::Ip(*ip),
             LhsValue::Bytes(bytes) => LhsValue::Bytes(Cow::Borrowed(bytes)),
             LhsValue::Int(integer) => LhsValue::Int(*integer),
+            LhsValue::Ulong(integer) => LhsValue::Ulong(*integer),
             LhsValue::Bool(b) => LhsValue::Bool(*b),
             LhsValue::Array(a) => LhsValue::Array(a.as_ref()),
             LhsValue::Map(m) => LhsValue::Map(m.as_ref()),
@@ -454,6 +459,7 @@ impl<'a> LhsValue<'a> {
             LhsValue::Ip(ip) => LhsValue::Ip(ip),
             LhsValue::Bytes(bytes) => LhsValue::Bytes(Cow::Owned(bytes.into_owned())),
             LhsValue::Int(i) => LhsValue::Int(i),
+            LhsValue::Ulong(i) => LhsValue::Ulong(i),
             LhsValue::Bool(b) => LhsValue::Bool(b),
             LhsValue::Array(arr) => LhsValue::Array(arr.into_owned()),
             LhsValue::Map(map) => LhsValue::Map(map.into_owned()),
@@ -572,6 +578,7 @@ impl<'a> Serialize for LhsValue<'a> {
                 }
             }
             LhsValue::Int(num) => num.serialize(serializer),
+            LhsValue::Ulong(num) => num.serialize(serializer),
             LhsValue::Bool(b) => b.serialize(serializer),
             LhsValue::Array(arr) => arr.serialize(serializer),
             LhsValue::Map(map) => map.serialize(serializer),
@@ -591,6 +598,7 @@ impl<'de, 'a> DeserializeSeed<'de> for LhsValueSeed<'a> {
         match self.0 {
             Type::Ip => Ok(LhsValue::Ip(std::net::IpAddr::deserialize(deserializer)?)),
             Type::Int => Ok(LhsValue::Int(i32::deserialize(deserializer)?)),
+            Type::Ulong => Ok(LhsValue::Ulong(u64::deserialize(deserializer)?)),
             Type::Bool => Ok(LhsValue::Bool(bool::deserialize(deserializer)?)),
             Type::Bytes => Ok(LhsValue::Bytes(
                 BytesOrString::deserialize(deserializer)?.into_bytes(),
@@ -659,6 +667,9 @@ declare_types!(
 
     /// A 32-bit integer number.
     Int(i32 | i32 | IntRange),
+
+    /// A 64-bit unsigned integer number
+    Ulong(u64 | u64 | UlongRange),
 
     /// An IPv4 or IPv6 address.
     ///

@@ -126,7 +126,7 @@ pub enum ComparisonOpExpr<'s> {
         /// * "&" | "bitwise_and"
         op: IntOp,
         /// Right-hand side integer value
-        rhs: i32,
+        rhs: RhsValue,
     },
 
     /// "contains" comparison
@@ -307,7 +307,8 @@ impl<'s> ComparisonExpr<'s> {
             match (&lhs_type, op) {
                 (Type::Ip, ComparisonOp::In)
                 | (Type::Bytes, ComparisonOp::In)
-                | (Type::Int, ComparisonOp::In) => {
+                | (Type::Int, ComparisonOp::In)
+                | (Type::Ulong, ComparisonOp::In) => {
                     if expect(input, "$").is_ok() {
                         let (name, input) = ListName::lex(input)?;
                         let list = scheme.get_list(&lhs_type).ok_or((
@@ -322,12 +323,13 @@ impl<'s> ComparisonExpr<'s> {
                 }
                 (Type::Ip, ComparisonOp::Ordering(op))
                 | (Type::Bytes, ComparisonOp::Ordering(op))
-                | (Type::Int, ComparisonOp::Ordering(op)) => {
+                | (Type::Int, ComparisonOp::Ordering(op))
+                | (Type::Ulong, ComparisonOp::Ordering(op)) => {
                     let (rhs, input) = RhsValue::lex_with(input, lhs_type)?;
                     (ComparisonOpExpr::Ordering { op, rhs }, input)
                 }
-                (Type::Int, ComparisonOp::Int(op)) => {
-                    let (rhs, input) = i32::lex(input)?;
+                (Type::Int, ComparisonOp::Int(op)) | (Type::Ulong, ComparisonOp::Int(op)) => {
+                    let (rhs, input) = RhsValue::lex_with(input, lhs_type)?;
                     (ComparisonOpExpr::Int { op, rhs }, input)
                 }
                 (Type::Bytes, ComparisonOp::Bytes(op)) => match op {
@@ -404,8 +406,10 @@ impl<'s> Expr<'s> for ComparisonExpr<'s> {
             ComparisonOpExpr::Int {
                 op: IntOp::BitwiseAnd,
                 rhs,
-            } => lhs.compile_with(compiler, false, move |x, _ctx| {
-                cast_value!(x, Int) & rhs != 0
+            } => lhs.compile_with(compiler, false, move |x, _ctx| match rhs {
+                RhsValue::Int(rhs) => cast_value!(x, Int) & rhs != 0,
+                RhsValue::Ulong(rhs) => cast_value!(x, Ulong) & rhs != 0,
+                _ => unreachable!(),
             }),
             ComparisonOpExpr::Contains(bytes) => {
                 macro_rules! search {
@@ -482,6 +486,13 @@ impl<'s> Expr<'s> for ComparisonExpr<'s> {
 
                     lhs.compile_with(compiler, false, move |x, _ctx| {
                         values.contains(cast_value!(x, Int))
+                    })
+                }
+                RhsValues::Ulong(values) => {
+                    let values: RangeSet<_> = values.into_iter().map(Into::into).collect();
+
+                    lhs.compile_with(compiler, false, move |x, _ctx| {
+                        values.contains(cast_value!(x, Ulong))
                     })
                 }
                 RhsValues::Bytes(values) => {
@@ -953,7 +964,7 @@ mod tests {
                 },
                 op: ComparisonOpExpr::Int {
                     op: IntOp::BitwiseAnd,
-                    rhs: 1,
+                    rhs: RhsValue::Int(1),
                 }
             }
         );

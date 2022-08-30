@@ -32,6 +32,7 @@ pub enum CTypeTag {
     Bool,
     Array,
     Map,
+    Ulong,
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +48,7 @@ impl From<CType> for Type {
             CTypeTag::Ip => Type::Ip,
             CTypeTag::Bytes => Type::Bytes,
             CTypeTag::Int => Type::Int,
+            CTypeTag::Ulong => Type::Ulong,
             CTypeTag::Bool => Type::Bool,
             CTypeTag::Array => Type::Array(ty.data.unwrap()),
             CTypeTag::Map => Type::Map(ty.data.unwrap()),
@@ -67,6 +69,10 @@ impl From<Type> for CType {
             },
             Type::Int => CType {
                 tag: CTypeTag::Int.into(),
+                data: None,
+            },
+            Type::Ulong => CType {
+                tag: CTypeTag::Ulong.into(),
                 data: None,
             },
             Type::Bool => CType {
@@ -338,6 +344,21 @@ pub extern "C" fn wirefilter_add_int_value_to_execution_context(
         Ok(f) => f,
         Err(_) => return false,
     };
+    // int used to be don't break backward compatibility
+    exec_context.set_field_value(field, value).is_ok()
+}
+
+#[no_mangle]
+pub extern "C" fn wirefilter_add_ulong_value_to_execution_context(
+    exec_context: &mut ExecutionContext<'_>,
+    name: ExternallyAllocatedStr<'_>,
+    value: u64,
+) -> bool {
+    let field = match exec_context.scheme().get_field(name.into_ref()) {
+        Ok(f) => f,
+        Err(_) => return false,
+    };
+    // int used to be don't break backward compatibility
     exec_context.set_field_value(field, value).is_ok()
 }
 
@@ -717,6 +738,16 @@ mod ffi_test {
         );
         wirefilter_add_type_field_to_scheme(
             &mut scheme,
+            ExternallyAllocatedStr::from("ulong1"),
+            Type::Ulong.into(),
+        );
+        wirefilter_add_type_field_to_scheme(
+            &mut scheme,
+            ExternallyAllocatedStr::from("ulong2"),
+            Type::Ulong.into(),
+        );
+        wirefilter_add_type_field_to_scheme(
+            &mut scheme,
             ExternallyAllocatedStr::from("map1"),
             wirefilter_create_map_type(Type::Int.into()),
         );
@@ -775,6 +806,18 @@ mod ffi_test {
             &mut exec_context,
             ExternallyAllocatedStr::from("num2"),
             1337,
+        );
+
+        wirefilter_add_ulong_value_to_execution_context(
+            &mut exec_context,
+            ExternallyAllocatedStr::from("ulong1"),
+            42,
+        );
+
+        wirefilter_add_ulong_value_to_execution_context(
+            &mut exec_context,
+            ExternallyAllocatedStr::from("ulong2"),
+            0x1337_1337_1337,
         );
 
         let mut map1 = wirefilter_create_map(Type::Int.into());
@@ -919,6 +962,12 @@ mod ffi_test {
 
             assert!(match_filter(
                 r#"num1 > 41 && num2 == 1337 && ip1 != 192.168.0.1 && str2 ~ "yo\d+" && map2["key"] == "value""#,
+                &scheme,
+                &exec_context
+            ));
+
+            assert!(match_filter(
+                r#"ulong1 == 42 && ulong2 == 0x133713371337 && (num2 & 0xffff)"#,
                 &scheme,
                 &exec_context
             ));

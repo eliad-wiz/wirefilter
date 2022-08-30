@@ -329,6 +329,7 @@ fn test_serde() {
     scheme.add_field("str".to_string(), Type::Bytes).unwrap();
     scheme.add_field("bytes".to_string(), Type::Bytes).unwrap();
     scheme.add_field("num".to_string(), Type::Int).unwrap();
+    scheme.add_field("ulong".to_string(), Type::Ulong).unwrap();
     scheme
         .add_field("arr".to_string(), Type::Array(Box::new(Type::Bool)))
         .unwrap();
@@ -366,6 +367,11 @@ fn test_serde() {
     );
 
     assert_eq!(
+        ctx.set_field_value(scheme.get_field("ulong").unwrap(), 0x1_0000_0000u64),
+        Ok(()),
+    );
+
+    assert_eq!(
         ctx.set_field_value(scheme.get_field("arr").unwrap(), {
             let mut arr = Array::new(Type::Bool);
             arr.push(false.into()).unwrap();
@@ -393,6 +399,7 @@ fn test_serde() {
             "str": "a string",
             "bytes": [97, 255, 255, 98],
             "num": 42,
+            "ulong": 0x1_0000_0000u64,
             "arr": [false, true],
             "map": {
                 "leet": 1337,
@@ -436,6 +443,7 @@ fn test_serde() {
             "str": "a string",
             "bytes": [97, 255, 255, 98],
             "num": 42,
+            "ulong": 0x1_0000_0000u64,
             "arr": [false, true],
             "map": [
                 [[97, 255, 255, 98], 17],

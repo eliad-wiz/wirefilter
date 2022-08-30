@@ -6,6 +6,7 @@ mod ip;
 mod list;
 mod map;
 mod regex;
+mod ulong;
 
 pub use self::{
     array::UninhabitedArray,
@@ -16,4 +17,5 @@ pub use self::{
     list::ListName,
     map::UninhabitedMap,
     regex::{Error as RegexError, Regex},
+    ulong::UlongRange,
 };
