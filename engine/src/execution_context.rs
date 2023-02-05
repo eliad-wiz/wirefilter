@@ -300,7 +300,7 @@ impl<'de, U> DeserializeSeed<'de> for &mut ExecutionContext<'de, U> {
     }
 }
 
-impl Serialize for ExecutionContext<'_> {
+impl<'e, U> Serialize for ExecutionContext<'e, U> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -399,7 +399,7 @@ fn test_serde() {
         .add_field("map", Type::Map(Type::Int.into()))
         .unwrap();
 
-    let mut ctx = ExecutionContext::new(&scheme);
+    let mut ctx = ExecutionContext::<'_, ()>::new(&scheme);
 
     assert_eq!(
         ctx.set_field_value(scheme.get_field("bool").unwrap(), LhsValue::Bool(false)),
