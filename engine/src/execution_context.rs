@@ -239,7 +239,7 @@ impl<'de, 'a, U> DeserializeSeed<'de> for &'a mut ExecutionContext<'de, U> {
     }
 }
 
-impl<'e> Serialize for ExecutionContext<'e> {
+impl<'e, U> Serialize for ExecutionContext<'e, U> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
