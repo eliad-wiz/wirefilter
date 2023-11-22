@@ -39,4 +39,6 @@ indoc = "0.3.6"
 lazy_static = "1.1.0"
 
 [features]
-default = [ "regex" ]
+default = [ "regex_pool" ]
+regex_regular = [ "regex" ]
+regex_pool = [ "regex" ]
