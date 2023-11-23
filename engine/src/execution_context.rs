@@ -337,7 +337,7 @@ fn test_serde() {
         .add_field("map".to_string(), Type::Map(Box::new(Type::Int)))
         .unwrap();
 
-    let mut ctx = ExecutionContext::new(&scheme);
+    let mut ctx = ExecutionContext::<'_, ()>::new(&scheme);
 
     assert_eq!(
         ctx.set_field_value(scheme.get_field("bool").unwrap(), LhsValue::Bool(false)),
