@@ -99,6 +99,16 @@ impl<'e, U> ExecutionContext<'e, U> {
         }
     }
 
+    /// Clears the runtime value of a given field name.
+    pub fn clear_field_value(&mut self, field: Field<'e>) -> Result<(), SetFieldValueError> {
+        if !std::ptr::eq(self.scheme, field.scheme()) {
+            return Err(SetFieldValueError::SchemeMismatchError(SchemeMismatchError));
+        }
+
+        self.values[field.index()] = None;
+        Ok(())
+    }
+
     /// Get the value of a field.
     pub fn get_field_value(&self, field: Field<'_>) -> Option<&LhsValue<'_>> {
         assert!(self.scheme() == field.scheme());
