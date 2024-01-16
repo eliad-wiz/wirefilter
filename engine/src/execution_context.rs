@@ -105,6 +105,16 @@ impl<'e, U> ExecutionContext<'e, U> {
         }
     }
 
+    /// Clears the runtime value of a given field name.
+    pub fn clear_field_value(&mut self, field: Field<'e>) -> Result<(), SetFieldValueError> {
+        if !std::ptr::eq(self.scheme, field.scheme()) {
+            return Err(SetFieldValueError::SchemeMismatchError(SchemeMismatchError));
+        }
+
+        self.values[field.index()] = None;
+        Ok(())
+    }
+
     /// Set the `ListMatcher` for the specified type.
     pub fn set_list_matcher<T: Any + Clone + Debug + PartialEq + ListMatcher + Send + Sync>(
         &mut self,
