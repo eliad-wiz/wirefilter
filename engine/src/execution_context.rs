@@ -110,7 +110,7 @@ impl<'e, U> ExecutionContext<'e, U> {
     }
 
     /// Get the value of a field.
-    pub fn get_field_value(&self, field: Field<'_>) -> Option<&LhsValue<'_>> {
+    pub fn get_field_value(&self, field: Field<'_>) -> Option<&LhsValue<'e>> {
         assert!(self.scheme() == field.scheme());
 
         self.values[field.index()].as_ref()
