@@ -22,6 +22,7 @@ cidr = { version = "0.2", features = ["serde"] }
 criterion = "0.5"
 fnv = "1.0.6"
 indoc = "2"
+hashbrown = { version = "0.15", features = ["serde"] }
 libc = "0.2.42"
 memmem = "0.1.1"
 num_enum = "0.7"

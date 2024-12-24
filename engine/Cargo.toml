@@ -24,6 +24,7 @@ backtrace.workspace = true
 cfg-if.workspace = true
 cidr.workspace = true
 fnv.workspace = true
+hashbrown.workspace = true
 memmem.workspace = true
 rand.workspace = true
 regex = { workspace = true, optional = true }

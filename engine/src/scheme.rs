@@ -9,16 +9,15 @@ use crate::{
 use fnv::FnvBuildHasher;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::hash_map::Entry;
 use std::sync::Arc;
 use std::{
-    collections::HashMap,
     convert::TryFrom,
     fmt::{self, Debug, Formatter},
     hash::{Hash, Hasher},
     iter::Iterator,
     ptr,
 };
+use hashbrown::hash_map::{Entry, HashMap};
 use thiserror::Error;
 
 /// An error that occurs if two underlying [schemes](struct@Scheme)
