@@ -1,13 +1,14 @@
 use crate::{
     filter::CompiledValueResult,
+    prelude::*,
     types::{ExpectedType, ExpectedTypeList, GetType, LhsValue, RhsValue, Type, TypeMismatchError},
 };
-use std::any::Any;
-use std::convert::TryFrom;
-use std::{
+use alloc::sync::Arc;
+use core::any::Any;
+use core::convert::TryFrom;
+use core::{
     fmt::{self, Debug},
     iter::once,
-    sync::Arc,
 };
 use thiserror::Error;
 
@@ -16,7 +17,7 @@ where
     A: ExactSizeIterator,
     B: ExactSizeIterator<Item = <A as Iterator>::Item>,
 {
-    chain: std::iter::Chain<A, B>,
+    chain: core::iter::Chain<A, B>,
     len_a: usize,
     len_b: usize,
 }
@@ -276,7 +277,7 @@ impl<'a> FunctionParam<'a> {
 pub struct FunctionDefinitionContext {
     inner: Arc<dyn Any + Send + Sync>,
     clone_cb: fn(&(dyn Any + Send + Sync)) -> Arc<dyn Any + Send + Sync>,
-    fmt_cb: fn(&(dyn Any + Send + Sync), &mut std::fmt::Formatter<'_>) -> std::fmt::Result,
+    fmt_cb: fn(&(dyn Any + Send + Sync), &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
 }
 
 impl FunctionDefinitionContext {
@@ -288,8 +289,8 @@ impl FunctionDefinitionContext {
 
     fn fmt_any<T: Any + Debug + Send + Sync>(
         t: &(dyn Any + Send + Sync),
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+        f: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
         t.downcast_ref::<T>().unwrap().fmt(f)
     }
 
@@ -338,13 +339,13 @@ impl FunctionDefinitionContext {
     }
 }
 
-impl<T: Any> std::convert::AsRef<T> for FunctionDefinitionContext {
+impl<T: Any> core::convert::AsRef<T> for FunctionDefinitionContext {
     fn as_ref(&self) -> &T {
         self.inner.downcast_ref::<T>().unwrap()
     }
 }
 
-impl<T: Any> std::convert::AsMut<T> for FunctionDefinitionContext {
+impl<T: Any> core::convert::AsMut<T> for FunctionDefinitionContext {
     fn as_mut(&mut self) -> &mut T {
         Arc::get_mut(&mut self.inner)
             .unwrap()
@@ -363,8 +364,8 @@ impl Clone for FunctionDefinitionContext {
     }
 }
 
-impl std::fmt::Debug for FunctionDefinitionContext {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for FunctionDefinitionContext {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "FunctionDefinitionContext(")?;
         (self.fmt_cb)(&*self.inner, f)?;
         write!(f, ")")?;
@@ -430,7 +431,7 @@ impl fmt::Debug for SimpleFunctionImpl {
 
 impl PartialEq for SimpleFunctionImpl {
     fn eq(&self, other: &SimpleFunctionImpl) -> bool {
-        std::ptr::eq(self.0 as *const (), other.0 as *const ())
+        core::ptr::eq(self.0 as *const (), other.0 as *const ())
     }
 }
 

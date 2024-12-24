@@ -1,23 +1,23 @@
 use crate::{
     lex::{expect, skip_space, Lex, LexResult, LexWith},
     lhs_types::{Array, ArrayIterator, ArrayMut, Map, MapIter, MapMut, MapValuesIntoIter},
+    prelude::*,
     rhs_types::{
         Bytes, IntRange, IpRange, UlongRange, UninhabitedArray, UninhabitedBool, UninhabitedMap,
     },
     scheme::{FieldIndex, IndexAccessError},
     strict_partial_ord::StrictPartialOrd,
 };
-use serde::de::{DeserializeSeed, Deserializer};
-use serde::{Deserialize, Serialize, Serializer};
-use std::{
-    borrow::Cow,
+use alloc::{borrow::Cow, collections::BTreeSet};
+use core::{
     cmp::Ordering,
-    collections::BTreeSet,
     convert::TryFrom,
     fmt::{self, Debug, Formatter},
     iter::once,
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
 };
+use serde::de::{DeserializeSeed, Deserializer};
+use serde::{Deserialize, Serialize, Serializer};
 use thiserror::Error;
 
 fn lex_rhs_values<'i, T: Lex<'i>>(input: &'i str) -> LexResult<'i, Vec<T>> {
@@ -96,8 +96,8 @@ impl<T: Iterator<Item = ExpectedType>> From<T> for ExpectedTypeList {
     }
 }
 
-impl std::fmt::Display for ExpectedTypeList {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for ExpectedTypeList {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -394,8 +394,8 @@ impl Type {
     }
 }
 
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Type {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Bool => write!(f, "Bool"),
             Self::Bytes => write!(f, "Bytes"),
@@ -456,9 +456,9 @@ impl<'a> BytesOrString<'a> {
 
 mod private {
     use super::IntoValue;
-    use crate::TypedArray;
-    use std::borrow::Cow;
-    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use crate::{prelude::*, TypedArray};
+    use alloc::borrow::Cow;
+    use core::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
     pub trait SealedIntoValue {}
 
@@ -875,7 +875,7 @@ impl Serialize for LhsValue<'_> {
         match self {
             LhsValue::Ip(ip) => ip.serialize(serializer),
             LhsValue::Bytes(bytes) => {
-                if let Ok(s) = std::str::from_utf8(bytes) {
+                if let Ok(s) = core::str::from_utf8(bytes) {
                     s.serialize(serializer)
                 } else {
                     bytes.serialize(serializer)
@@ -900,7 +900,7 @@ impl<'de> DeserializeSeed<'de> for LhsValueSeed<'_> {
         D: Deserializer<'de>,
     {
         match self.0 {
-            Type::Ip => Ok(LhsValue::Ip(std::net::IpAddr::deserialize(deserializer)?)),
+            Type::Ip => Ok(LhsValue::Ip(core::net::IpAddr::deserialize(deserializer)?)),
             Type::Int => Ok(LhsValue::Int(i64::deserialize(deserializer)?)),
             Type::Ulong => Ok(LhsValue::Ulong(u64::deserialize(deserializer)?)),
             Type::Bool => Ok(LhsValue::Bool(bool::deserialize(deserializer)?)),
@@ -963,7 +963,7 @@ impl<'a> IntoIterator for LhsValue<'a> {
 }
 
 pub enum Iter<'a> {
-    IterArray(std::slice::Iter<'a, LhsValue<'a>>),
+    IterArray(core::slice::Iter<'a, LhsValue<'a>>),
     IterMap(MapIter<'a, 'a>),
 }
 
@@ -1198,7 +1198,7 @@ impl<'a, 'b> From<&'a mut LhsValue<'b>> for LhsValueMut<'a, 'b> {
 
 #[test]
 fn test_lhs_value_deserialize() {
-    use std::str::FromStr;
+    use core::str::FromStr;
 
     let ipv4: LhsValue<'_> = serde_json::from_str("\"127.0.0.1\"").unwrap();
     assert_eq!(ipv4, LhsValue::Ip(IpAddr::from_str("127.0.0.1").unwrap()));
@@ -1308,5 +1308,5 @@ fn test_type_deserialize() {
 
 #[test]
 fn test_size_of_lhs_value() {
-    assert_eq!(std::mem::size_of::<LhsValue<'_>>(), 48);
+    assert_eq!(core::mem::size_of::<LhsValue<'_>>(), 48);
 }

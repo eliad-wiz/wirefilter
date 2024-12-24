@@ -8,6 +8,7 @@ use crate::{
     compiler::Compiler,
     filter::{CompiledExpr, CompiledOneExpr, CompiledVecExpr},
     lex::{expect, skip_space, Lex, LexErrorKind, LexResult, LexWith},
+    prelude::*,
     types::{GetType, Type, TypeMismatchError},
 };
 use serde::Serialize;

@@ -15,8 +15,8 @@ use crate::{
     scheme::{Scheme, UnknownFieldError},
     types::{GetType, Type, TypeMismatchError},
 };
+use core::fmt::{self, Debug};
 use serde::Serialize;
-use std::fmt::{self, Debug};
 use visitor::{UsesListVisitor, UsesVisitor, Visitor, VisitorMut};
 
 /// Trait used to represent node that evaluates to a [`bool`] (or a [`Vec<bool>`]).

@@ -4,20 +4,21 @@ use crate::{
     functions::FunctionDefinition,
     lex::{expect, span, take_while, Lex, LexErrorKind, LexResult, LexWith},
     list_matcher::ListDefinition,
+    prelude::*,
     types::{GetType, RhsValue, Type},
 };
-use fnv::FnvBuildHasher;
-use serde::ser::SerializeMap;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::sync::Arc;
-use std::{
+use alloc::sync::Arc;
+use core::{
     convert::TryFrom,
     fmt::{self, Debug, Formatter},
     hash::{Hash, Hasher},
     iter::Iterator,
     ptr,
 };
+use fnv::FnvBuildHasher;
 use hashbrown::hash_map::{Entry, HashMap};
+use serde::ser::SerializeMap;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
 /// An error that occurs if two underlying [schemes](struct@Scheme)
