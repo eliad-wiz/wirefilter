@@ -9,7 +9,7 @@ use std::{
 };
 
 cfg_if! {
-    if #[cfg(feature = "regex")] {
+    if #[cfg(feature = "std")] {
         mod imp_real;
         pub use self::imp_real::*;
     } else {

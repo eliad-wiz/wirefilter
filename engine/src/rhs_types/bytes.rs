@@ -1,14 +1,15 @@
 use crate::{
     lex::{take, Lex, LexErrorKind, LexResult},
+    prelude::*,
     strict_partial_ord::StrictPartialOrd,
 };
-use serde::{Serialize, Serializer};
-use std::{
+use core::{
     fmt::{self, Debug, Formatter},
     hash::{Hash, Hasher},
     ops::Deref,
     str,
 };
+use serde::{Serialize, Serializer};
 
 /// BytesFormat describes the format in which the string was expressed
 #[derive(PartialEq, Eq, Copy, Clone)]
@@ -52,7 +53,7 @@ impl Serialize for Bytes {
         S: Serializer,
     {
         match self.format() {
-            BytesFormat::Quoted | BytesFormat::Raw(_) => match std::str::from_utf8(&self.data) {
+            BytesFormat::Quoted | BytesFormat::Raw(_) => match core::str::from_utf8(&self.data) {
                 Ok(s) => s.serialize(serializer),
                 Err(_) => self.data.serialize(serializer),
             },
@@ -121,7 +122,7 @@ impl Debug for Bytes {
         }
 
         match self.format {
-            BytesFormat::Quoted | BytesFormat::Raw(_) => match std::str::from_utf8(&self.data) {
+            BytesFormat::Quoted | BytesFormat::Raw(_) => match core::str::from_utf8(&self.data) {
                 Ok(s) => s.fmt(f),
                 Err(_) => fmt_raw(&self.data, f),
             },
@@ -148,10 +149,10 @@ impl AsRef<[u8]> for Bytes {
 
 impl<'a> IntoIterator for &'a Bytes {
     type Item = &'a u8;
-    type IntoIter = std::slice::Iter<'a, u8>;
+    type IntoIter = core::slice::Iter<'a, u8>;
 
     #[inline]
-    fn into_iter(self) -> std::slice::Iter<'a, u8> {
+    fn into_iter(self) -> core::slice::Iter<'a, u8> {
         self.iter()
     }
 }

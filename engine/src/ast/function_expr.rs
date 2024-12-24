@@ -17,12 +17,13 @@ use crate::{
     },
     lex::{expect, skip_space, span, Lex, LexError, LexErrorKind, LexResult, LexWith},
     lhs_types::Array,
+    prelude::*,
     scheme::Function,
     types::{GetType, LhsValue, RhsValue, Type},
 };
+use core::hash::{Hash, Hasher};
+use core::iter::once;
 use serde::Serialize;
-use std::hash::{Hash, Hasher};
-use std::iter::once;
 
 /// Represents a function argument in a function call.
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize)]

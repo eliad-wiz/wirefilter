@@ -21,7 +21,7 @@ libc.workspace = true
 num_enum.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-wirefilter.workspace = true
+wirefilter = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
 indoc.workspace = true

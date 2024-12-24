@@ -8,10 +8,11 @@
 use crate::{
     execution_context::ExecutionContext,
     lhs_types::TypedArray,
+    prelude::*,
     scheme::{Scheme, SchemeMismatchError},
     types::{LhsValue, Type},
 };
-use std::fmt;
+use core::fmt;
 
 type BoxedClosureToOneBool<'s, U> =
     Box<dyn for<'e> Fn(&'e ExecutionContext<'e, U>) -> bool + Sync + Send + 's>;
@@ -184,7 +185,7 @@ pub struct Filter<'s, U = ()> {
     scheme: &'s Scheme,
 }
 
-impl<U> std::fmt::Debug for Filter<'_, U> {
+impl<U> core::fmt::Debug for Filter<'_, U> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Filter")
             .field("root", &self.root_expr)
