@@ -1,11 +1,13 @@
 use crate::{
     lex::{Lex, LexResult},
     lhs_types::Map,
+    prelude::*,
     strict_partial_ord::StrictPartialOrd,
     types::{GetType, Type},
 };
+use alloc::borrow::Borrow;
+use core::cmp::Ordering;
 use serde::Serialize;
-use std::{borrow::Borrow, cmp::Ordering};
 
 /// [Uninhabited / empty type](https://doc.rust-lang.org/nomicon/exotic-sizes.html#empty-types)
 /// for `map` with traits we need for RHS values.

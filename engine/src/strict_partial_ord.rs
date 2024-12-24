@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use core::cmp::Ordering;
 
 /// Strict version of PartialOrd that can define different enum items as
 /// incomparable.

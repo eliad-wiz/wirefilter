@@ -4,30 +4,36 @@ use super::{
     visitor::{Visitor, VisitorMut},
     Expr,
 };
+#[cfg(feature = "std")]
+use crate::rhs_types::Regex;
 use crate::{
     ast::index_expr::IndexExpr,
     compiler::Compiler,
     filter::{CompiledExpr, CompiledValueExpr},
     lex::{expect, skip_space, span, Lex, LexErrorKind, LexResult, LexWith},
+    prelude::*,
     range_set::RangeSet,
-    rhs_types::{Bytes, ExplicitIpRange, ListName, Regex, Wildcard},
+    rhs_types::{Bytes, ExplicitIpRange, ListName, Wildcard},
     scheme::{Field, Identifier, List},
     searcher::{EmptySearcher, TwoWaySearcher},
     strict_partial_ord::StrictPartialOrd,
     types::{GetType, LhsValue, RhsValue, RhsValues, Type},
 };
+use alloc::collections::BTreeSet;
+use core::{cmp::Ordering, net::IpAddr};
 use serde::{Serialize, Serializer};
 use sliceslice::MemchrSearcher;
-use std::collections::BTreeSet;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "wasm32"))]
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64", target_arch = "wasm32"),
+    feature = "std"
+))]
 use std::sync::LazyLock;
-use std::{cmp::Ordering, net::IpAddr};
 
 const LESS: u8 = 0b001;
 const GREATER: u8 = 0b010;
 const EQUAL: u8 = 0b100;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), feature = "std"))]
 static USE_AVX2: LazyLock<bool> = LazyLock::new(|| {
     use std::env;
 
@@ -37,7 +43,7 @@ static USE_AVX2: LazyLock<bool> = LazyLock::new(|| {
     is_x86_feature_detected!("avx2") && !NO_VALUES.contains(&use_avx2.as_str())
 });
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "std"))]
 static USE_SIMD128: LazyLock<bool> = LazyLock::new(|| {
     use std::env;
 
@@ -98,6 +104,14 @@ lex_enum!(
     }
 );
 
+#[cfg(not(feature = "std"))]
+lex_enum!(BytesOp {
+    "contains" => Contains,
+    "wildcard" => Wildcard,
+    "strict wildcard" => StrictWildcard,
+});
+
+#[cfg(feature = "std")]
 lex_enum!(BytesOp {
     "contains" => Contains,
     "~" | "matches" => Matches,
@@ -149,6 +163,7 @@ pub enum ComparisonOpExpr<'s> {
     Contains(Bytes),
 
     /// "matches / ~" comparison
+    #[cfg(feature = "std")]
     #[serde(serialize_with = "serialize_matches")]
     Matches(Regex),
 
@@ -203,6 +218,7 @@ fn serialize_contains<S: Serializer>(rhs: &Bytes, ser: S) -> Result<S::Ok, S::Er
     serialize_op_rhs("Contains", rhs, ser)
 }
 
+#[cfg(feature = "std")]
 fn serialize_matches<S: Serializer>(rhs: &Regex, ser: S) -> Result<S::Ok, S::Error> {
     serialize_op_rhs("Matches", rhs, ser)
 }
@@ -377,6 +393,7 @@ impl<'s> ComparisonExpr<'s> {
                         let (bytes, input) = Bytes::lex(input)?;
                         (ComparisonOpExpr::Contains(bytes), input)
                     }
+                    #[cfg(feature = "std")]
                     BytesOp::Matches => {
                         let (regex, input) = Regex::lex_with(input, parser)?;
                         (ComparisonOpExpr::Matches(regex), input)
@@ -511,7 +528,7 @@ impl<'s> Expr<'s> for ComparisonExpr<'s> {
                     return search!(MemchrSearcher::new(byte));
                 }
 
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+                #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), feature = "std"))]
                 if *USE_AVX2 {
                     use rand::{thread_rng, Rng};
                     use sliceslice::x86::*;
@@ -601,6 +618,7 @@ impl<'s> Expr<'s> for ComparisonExpr<'s> {
 
                 search!(TwoWaySearcher::new(bytes))
             }
+            #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), feature = "std"))]
             ComparisonOpExpr::Matches(regex) => {
                 lhs.compile_with(compiler, false, move |x, _ctx| {
                     regex.is_match(cast_value!(x, Bytes))

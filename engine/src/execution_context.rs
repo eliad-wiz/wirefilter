@@ -1,14 +1,15 @@
 use crate::{
+    prelude::*,
     scheme::{Field, List, Scheme, SchemeMismatchError},
     types::{GetType, LhsValue, LhsValueSeed, Type, TypeMismatchError},
     ListMatcher,
 };
+use alloc::borrow::Cow;
+use core::fmt;
+use core::fmt::Debug;
 use serde::de::{self, DeserializeSeed, Deserializer, MapAccess, Visitor};
 use serde::ser::{SerializeMap, SerializeSeq, Serializer};
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
-use std::fmt;
-use std::fmt::Debug;
 use thiserror::Error;
 
 /// An error that occurs when setting the field value in the [`crate::ExecutionContext`].
@@ -81,7 +82,7 @@ impl<'e, U> ExecutionContext<'e, U> {
         field: Field<'e>,
         value: V,
     ) -> Result<Option<LhsValue<'e>>, SetFieldValueError> {
-        if !std::ptr::eq(self.scheme, field.scheme()) {
+        if !core::ptr::eq(self.scheme, field.scheme()) {
             return Err(SetFieldValueError::SchemeMismatchError(SchemeMismatchError));
         }
         let value = value.into();
@@ -101,7 +102,7 @@ impl<'e, U> ExecutionContext<'e, U> {
 
     /// Clears the runtime value of a given field name.
     pub fn clear_field_value(&mut self, field: Field<'e>) -> Result<(), SetFieldValueError> {
-        if !std::ptr::eq(self.scheme, field.scheme()) {
+        if !core::ptr::eq(self.scheme, field.scheme()) {
             return Err(SetFieldValueError::SchemeMismatchError(SchemeMismatchError));
         }
 
@@ -190,8 +191,8 @@ pub struct ExecutionContextGuard<'a, 'e, U, T> {
 impl<'a, 'e, U, T> ExecutionContextGuard<'a, 'e, U, T> {
     fn new(old: &'a mut ExecutionContext<'e, U>, user_data: T) -> Self {
         let scheme = old.scheme();
-        let values = std::mem::take(&mut old.values);
-        let list_matchers = std::mem::take(&mut old.list_matchers);
+        let values = core::mem::take(&mut old.values);
+        let list_matchers = core::mem::take(&mut old.list_matchers);
 
         let new = ExecutionContext {
             scheme,
@@ -204,7 +205,7 @@ impl<'a, 'e, U, T> ExecutionContextGuard<'a, 'e, U, T> {
     }
 }
 
-impl<'e, U, T> std::ops::Deref for ExecutionContextGuard<'_, 'e, U, T> {
+impl<'e, U, T> core::ops::Deref for ExecutionContextGuard<'_, 'e, U, T> {
     type Target = ExecutionContext<'e, T>;
 
     fn deref(&self) -> &Self::Target {
@@ -212,7 +213,7 @@ impl<'e, U, T> std::ops::Deref for ExecutionContextGuard<'_, 'e, U, T> {
     }
 }
 
-impl<U, T> std::ops::DerefMut for ExecutionContextGuard<'_, '_, U, T> {
+impl<U, T> core::ops::DerefMut for ExecutionContextGuard<'_, '_, U, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.new
     }
@@ -220,8 +221,8 @@ impl<U, T> std::ops::DerefMut for ExecutionContextGuard<'_, '_, U, T> {
 
 impl<U, T> Drop for ExecutionContextGuard<'_, '_, U, T> {
     fn drop(&mut self) {
-        self.old.values = std::mem::take(&mut self.new.values);
-        self.old.list_matchers = std::mem::take(&mut self.new.list_matchers);
+        self.old.values = core::mem::take(&mut self.new.values);
+        self.old.list_matchers = core::mem::take(&mut self.new.list_matchers);
     }
 }
 

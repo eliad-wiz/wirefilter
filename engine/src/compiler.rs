@@ -60,14 +60,14 @@ pub trait Compiler<'s>: Sized + 's {
 /// Default compiler
 #[derive(Clone, Copy, Debug)]
 pub struct DefaultCompiler<U = ()> {
-    _marker: std::marker::PhantomData<U>,
+    _marker: core::marker::PhantomData<U>,
 }
 
 impl<U> Default for DefaultCompiler<U> {
     #[inline]
     fn default() -> Self {
         Self {
-            _marker: std::marker::PhantomData,
+            _marker: core::marker::PhantomData,
         }
     }
 }

@@ -1,5 +1,6 @@
+use crate::prelude::*;
+use core::mem::ManuallyDrop;
 use memmem::Searcher;
-use std::mem::ManuallyDrop;
 
 pub struct EmptySearcher;
 
