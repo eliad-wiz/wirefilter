@@ -1,11 +1,11 @@
 use crate::lex::{LexResult, LexWith};
 use crate::rhs_types::bytes::lex_quoted_or_raw_string;
 use crate::{Bytes, FilterParser, LexErrorKind};
-use serde::{Serialize, Serializer};
-use std::{
+use core::{
     fmt::{self, Debug, Formatter},
     hash::{Hash, Hasher},
 };
+use serde::{Serialize, Serializer};
 use thiserror::Error;
 use wildcard::WildcardToken;
 

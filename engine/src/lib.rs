@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 //! This is the main crate for the filter engine.
 //!
 //! It contains public APIs for parsing filter syntax, compiling them into
@@ -58,6 +60,18 @@
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::needless_raw_string_hashes)]
 
+extern crate alloc;
+
+mod prelude {
+    pub use alloc::{
+        boxed::Box,
+        format,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+}
+
 #[macro_use]
 mod lex;
 
@@ -71,6 +85,7 @@ mod filter;
 mod functions;
 mod lhs_types;
 mod list_matcher;
+#[cfg(feature = "std")]
 mod panic;
 mod range_set;
 mod rhs_types;
@@ -78,6 +93,11 @@ mod searcher;
 mod strict_partial_ord;
 mod types;
 
+#[cfg(feature = "std")]
+pub use self::panic::{
+    catch_panic, panic_catcher_disable, panic_catcher_enable, panic_catcher_get_backtrace,
+    panic_catcher_set_fallback_mode, panic_catcher_set_hook, PanicCatcherFallbackMode,
+};
 pub use self::{
     ast::{
         field_expr::{ComparisonExpr, ComparisonOpExpr, IdentifierExpr, IntOp, OrderingOp},
@@ -105,10 +125,6 @@ pub use self::{
     lhs_types::{Array, ArrayMut, Map, MapIter, MapMut, TypedArray},
     list_matcher::{
         AlwaysList, AlwaysListMatcher, ListDefinition, ListMatcher, NeverList, NeverListMatcher,
-    },
-    panic::{
-        catch_panic, panic_catcher_disable, panic_catcher_enable, panic_catcher_get_backtrace,
-        panic_catcher_set_fallback_mode, panic_catcher_set_hook, PanicCatcherFallbackMode,
     },
     rhs_types::{
         Bytes, BytesFormat, ExplicitIpRange, IntRange, IpCidr, IpRange, Regex, RegexError,

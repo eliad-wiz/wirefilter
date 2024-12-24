@@ -5,13 +5,13 @@ use crate::{
     strict_partial_ord::StrictPartialOrd,
 };
 use cidr::{errors::NetworkParseError, Ipv4Cidr, Ipv6Cidr};
-use serde::Serialize;
-use std::{
+use core::{
     cmp::Ordering,
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
     ops::RangeInclusive,
     str::FromStr,
 };
+use serde::Serialize;
 
 fn match_addr_or_cidr(input: &str) -> LexResult<'_, &str> {
     take_while(

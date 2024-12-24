@@ -1,22 +1,22 @@
 use crate::{
     lhs_types::AsRefIterator,
+    prelude::*,
     types::{
         BytesOrString, CompoundType, GetType, LhsValue, LhsValueMut, LhsValueSeed, Type,
         TypeMismatchError,
     },
 };
-use serde::{
-    de::{self, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor},
-    ser::{SerializeMap, SerializeSeq},
-    Serialize, Serializer,
-};
-use std::{
-    borrow::Cow,
-    collections::BTreeMap,
+use alloc::{borrow::Cow, collections::BTreeMap};
+use core::{
     fmt,
     hash::{Hash, Hasher},
     hint::unreachable_unchecked,
     ops::Deref,
+};
+use serde::{
+    de::{self, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor},
+    ser::{SerializeMap, SerializeSeq},
+    Serialize, Serializer,
 };
 
 #[derive(Debug, Clone)]
@@ -224,7 +224,7 @@ impl Hash for Map<'_> {
 }
 
 /// An iterator over the entries of a Map.
-pub struct MapIter<'a, 'b>(std::collections::btree_map::Iter<'b, Box<[u8]>, LhsValue<'a>>);
+pub struct MapIter<'a, 'b>(alloc::collections::btree_map::Iter<'b, Box<[u8]>, LhsValue<'a>>);
 
 impl<'a, 'b> Iterator for MapIter<'a, 'b> {
     type Item = (&'b [u8], &'b LhsValue<'a>);
@@ -248,8 +248,8 @@ impl ExactSizeIterator for MapIter<'_, '_> {
 }
 
 pub enum MapValuesIntoIter<'a> {
-    Owned(std::collections::btree_map::IntoIter<Box<[u8]>, LhsValue<'a>>),
-    Borrowed(AsRefIterator<'a, std::collections::btree_map::Values<'a, Box<[u8]>, LhsValue<'a>>>),
+    Owned(alloc::collections::btree_map::IntoIter<Box<[u8]>, LhsValue<'a>>),
+    Borrowed(AsRefIterator<'a, alloc::collections::btree_map::Values<'a, Box<[u8]>, LhsValue<'a>>>),
 }
 
 impl<'a> Iterator for MapValuesIntoIter<'a> {
@@ -280,7 +280,7 @@ impl ExactSizeIterator for MapValuesIntoIter<'_> {
 
 impl<'a> IntoIterator for Map<'a> {
     type Item = (Box<[u8]>, LhsValue<'a>);
-    type IntoIter = std::collections::btree_map::IntoIter<Box<[u8]>, LhsValue<'a>>;
+    type IntoIter = alloc::collections::btree_map::IntoIter<Box<[u8]>, LhsValue<'a>>;
     fn into_iter(self) -> Self::IntoIter {
         match self.data {
             InnerMap::Owned(map) => map.into_iter(),
@@ -304,12 +304,15 @@ impl Serialize for Map<'_> {
     where
         S: Serializer,
     {
-        let to_map = self.data.keys().all(|key| std::str::from_utf8(key).is_ok());
+        let to_map = self
+            .data
+            .keys()
+            .all(|key| core::str::from_utf8(key).is_ok());
 
         if to_map {
             let mut map = serializer.serialize_map(Some(self.len()))?;
             for (k, v) in self.data.iter() {
-                map.serialize_entry(std::str::from_utf8(k).unwrap(), v)?;
+                map.serialize_entry(core::str::from_utf8(k).unwrap(), v)?;
             }
             map.end()
         } else {
@@ -474,7 +477,7 @@ impl<'a, 'b> From<&'a mut Map<'b>> for MapMut<'a, 'b> {
 
 #[test]
 fn test_size_of_map() {
-    assert_eq!(std::mem::size_of::<Map<'_>>(), 40);
+    assert_eq!(core::mem::size_of::<Map<'_>>(), 40);
 }
 
 #[test]

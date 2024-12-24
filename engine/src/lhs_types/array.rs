@@ -1,20 +1,21 @@
 use crate::{
     lhs_types::AsRefIterator,
+    prelude::*,
     types::{
         CompoundType, GetType, IntoValue, LhsValue, LhsValueMut, LhsValueSeed, Type,
         TypeMismatchError,
     },
 };
-use serde::{
-    de::{self, DeserializeSeed, Deserializer, SeqAccess, Visitor},
-    ser::SerializeSeq,
-    Serialize, Serializer,
-};
-use std::{
+use core::{
     fmt,
     hash::{Hash, Hasher},
     hint::unreachable_unchecked,
     ops::Deref,
+};
+use serde::{
+    de::{self, DeserializeSeed, Deserializer, SeqAccess, Visitor},
+    ser::SerializeSeq,
+    Serialize, Serializer,
 };
 
 // Ideally, we would want to use Cow<'a, LhsValue<'a>> here
@@ -209,12 +210,12 @@ impl<'a> Array<'a> {
         F: Fn(LhsValue<'a>) -> Option<LhsValue<'a>>,
     {
         let Self { mut data, .. } = self;
-        let mut vec = std::mem::take(data.as_vec());
+        let mut vec = core::mem::take(data.as_vec());
         let val_type = value_type.into();
         let mut write = 0;
         for read in 0..vec.len() {
             let elem = &mut vec[read];
-            if let Some(elem) = func(std::mem::replace(elem, LhsValue::Bool(false))) {
+            if let Some(elem) = func(core::mem::replace(elem, LhsValue::Bool(false))) {
                 assert!(elem.get_type() == val_type.into());
                 vec[write] = elem;
                 write += 1;
@@ -333,8 +334,8 @@ impl<'a, V: IntoValue<'a>> FromIterator<V> for Array<'a> {
 }
 
 pub enum ArrayIterator<'a> {
-    Owned(std::vec::IntoIter<LhsValue<'a>>),
-    Borrowed(AsRefIterator<'a, std::slice::Iter<'a, LhsValue<'a>>>),
+    Owned(alloc::vec::IntoIter<LhsValue<'a>>),
+    Borrowed(AsRefIterator<'a, core::slice::Iter<'a, LhsValue<'a>>>),
 }
 
 impl<'a> Iterator for ArrayIterator<'a> {
@@ -374,7 +375,7 @@ impl<'a> IntoIterator for Array<'a> {
 
 impl<'a, 'b> IntoIterator for &'b Array<'a> {
     type Item = &'b LhsValue<'a>;
-    type IntoIter = std::slice::Iter<'b, LhsValue<'a>>;
+    type IntoIter = core::slice::Iter<'b, LhsValue<'a>>;
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter()
     }
@@ -485,7 +486,7 @@ where
     V: IntoValue<'a>,
 {
     array: Array<'a>,
-    _marker: std::marker::PhantomData<[V]>,
+    _marker: core::marker::PhantomData<[V]>,
 }
 
 impl<'a, V: IntoValue<'a>> TypedArray<'a, V> {
@@ -554,7 +555,7 @@ impl<'a, V: IntoValue<'a>> Default for TypedArray<'a, V> {
     fn default() -> Self {
         Self {
             array: Array::new(V::TYPE),
-            _marker: std::marker::PhantomData,
+            _marker: core::marker::PhantomData,
         }
     }
 }
@@ -576,7 +577,7 @@ impl<'a, V: IntoValue<'a>> FromIterator<V> for TypedArray<'a, V> {
     {
         Self {
             array: Array::from_iter(iter),
-            _marker: std::marker::PhantomData,
+            _marker: core::marker::PhantomData,
         }
     }
 }
@@ -592,7 +593,7 @@ impl<'a, V: IntoValue<'a>> IntoValue<'a> for TypedArray<'a, V> {
 
 #[test]
 fn test_size_of_array() {
-    assert_eq!(std::mem::size_of::<Array<'_>>(), 32);
+    assert_eq!(core::mem::size_of::<Array<'_>>(), 32);
 }
 
 #[test]

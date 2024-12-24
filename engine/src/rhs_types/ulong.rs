@@ -2,8 +2,8 @@ use crate::{
     lex::{expect, span, take_while, Lex, LexErrorKind, LexResult},
     strict_partial_ord::StrictPartialOrd,
 };
+use core::ops::RangeInclusive;
 use serde::Serialize;
-use std::ops::RangeInclusive;
 
 fn lex_digits(input: &str) -> LexResult<'_, &str> {
     // Lex any supported digits (up to radix 16) for better error locations.
