@@ -25,7 +25,7 @@ cfg-if.workspace = true
 cidr.workspace = true
 fnv.workspace = true
 hashbrown.workspace = true
-memmem.workspace = true
+memchr.workspace = true
 rand.workspace = true
 regex = { workspace = true, optional = true }
 serde.workspace = true

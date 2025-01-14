@@ -24,7 +24,7 @@ fnv = "1.0.6"
 indoc = "2"
 hashbrown = { version = "0.15", features = ["serde"] }
 libc = "0.2.42"
-memmem = "0.1.1"
+memchr = { version = "2.7.4", default-features = false }
 num_enum = "0.7"
 rand = "0.8"
 regex = { version = "1.3.6" }
