@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use core::mem::ManuallyDrop;
-use memmem::Searcher;
+use memchr::memmem;
 
 pub struct EmptySearcher;
 
@@ -19,7 +19,7 @@ pub struct TwoWaySearcher {
     // we don't want to tie it to the lifetime of `TwoWaySearcher`, since our data is heap-allocated
     // and is guaranteed to deref to the same address across moves of the container. Hence, we use
     // `static` as a substitute lifetime and it points to the same the data as `needle`.
-    searcher: ManuallyDrop<memmem::TwoWaySearcher<'static>>,
+    searcher: ManuallyDrop<memmem::Finder<'static>>,
 }
 
 // This is safe because we are only ever accessing `needle` mutably during `Drop::drop`
@@ -39,13 +39,13 @@ impl TwoWaySearcher {
 
         TwoWaySearcher {
             needle,
-            searcher: ManuallyDrop::new(memmem::TwoWaySearcher::new(needle_static)),
+            searcher: ManuallyDrop::new(memmem::Finder::new(needle_static)),
         }
     }
 
     #[inline]
     pub fn search_in(&self, haystack: &[u8]) -> bool {
-        self.searcher.search_in(haystack).is_some()
+        self.searcher.find(haystack).is_some()
     }
 }
 
