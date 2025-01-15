@@ -209,7 +209,13 @@ fn test_lex() {
         range([0, 0, 0, 0, 0, 0, 0, 1]..=[0, 0, 0, 0, 0, 0, 0, 2]),
         "||"
     );
-    assert_ok!(IpRange::lex("1.1.1.01"), cidr([1, 1, 1, 1], 32), "");
+    assert_err!(
+        IpRange::lex("1.1.1.01"),
+        LexErrorKind::ParseNetwork(NetworkParseError::AddrParseError(
+            IpAddr::from_str("1.1.1.01").unwrap_err()
+        )),
+        "1.1.1.01"
+    );
     match IpRange::lex("10.0.0.0/100") {
         Err((
             LexErrorKind::ParseNetwork(NetworkParseError::NetworkLengthTooLongError(_)),
