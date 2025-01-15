@@ -20,13 +20,13 @@ name = "bench"
 harness = false
 
 [dependencies]
-backtrace.workspace = true
+backtrace = { workspace = true, optional = true }
 cfg-if.workspace = true
 cidr.workspace = true
 fnv.workspace = true
 hashbrown.workspace = true
 memchr.workspace = true
-rand.workspace = true
+rand = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
@@ -40,6 +40,6 @@ indoc.workspace = true
 
 [features]
 default = [ "std" ]
-std = [ "regex_pool" ]
+std = [ "regex_pool", "dep:backtrace", "dep:rand" ]
 regex_regular = [ "regex" ]
 regex_pool = [ "regex" ]
