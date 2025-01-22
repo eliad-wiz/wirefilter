@@ -129,7 +129,8 @@ impl<'a> Map<'a> {
         Ok(LhsValueMut::from(self.data.get_or_insert(key, value)))
     }
 
-    pub(crate) fn as_ref(&'a self) -> Map<'a> {
+    /// Converts a `Map` with owned data to a borrowed `Map`
+    pub fn as_ref(&'a self) -> Map<'a> {
         Map {
             val_type: self.val_type,
             data: match self.data {
