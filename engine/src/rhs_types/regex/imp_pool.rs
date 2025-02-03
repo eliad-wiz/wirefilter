@@ -1,14 +1,83 @@
 use crate::{FilterParser, RegexFormat};
+use cfg_if::cfg_if;
 use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex, OnceLock};
 
-pub use regex::Error;
+cfg_if! {
+    if #[cfg(feature = "regex_pcre2")] {
+        use pcre2::Error as Pcre2Error;
+        use core::fmt;
+
+        /// Your wrapper error type around `pcre2::Error`.
+        #[derive(Debug)]
+        pub struct Error {
+            inner: Pcre2Error,
+        }
+
+        impl Error {
+            /// Create a new `MyError` from a `pcre2::Error`.
+            pub fn new(err: Pcre2Error) -> Self {
+                Self { inner: err }
+            }
+
+            /// Access the underlying PCRE2 error code.
+            pub fn code(&self) -> i32 {
+                self.inner.code()
+            }
+        }
+
+        // Implement `PartialEq` by comparing the underlying PCRE2 error codes.
+        impl PartialEq for Error {
+            fn eq(&self, other: &Self) -> bool {
+                self.code() == other.code()
+            }
+        }
+
+        // Optional: Make it a proper error type with `Display` and `Error`.
+        impl fmt::Display for Error {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "MyError (PCRE2 Error code: {})", self.code())
+            }
+        }
+
+        impl core::error::Error for Error {}
+
+        // Optional: A `From` impl for ergonomic conversion from `pcre2::Error`.
+        impl From<Pcre2Error> for Error {
+            fn from(err: Pcre2Error) -> Self {
+                Error::new(err)
+            }
+        }
+
+        pub use pcre2::bytes::Regex as ExtRegex;
+        pub fn regex_build(pattern: &str, _parser: &FilterParser<'_>) -> Result<ExtRegex, Error> {
+            pcre2::bytes::RegexBuilder::new().jit_if_available(true).build(pattern).map_err(Error::from)
+        }
+
+        pub fn regex_match(regex: &ExtRegex, text: &[u8]) -> bool {
+            regex.is_match(text).unwrap_or(false)
+        }
+    } else {
+        pub use regex::Error;
+        pub use regex::bytes::Regex as ExtRegex;
+        pub fn regex_build(pattern: &str, parser: &FilterParser<'_>) -> Result<ExtRegex, Error> {
+            ::regex::bytes::RegexBuilder::new(pattern)
+                .unicode(false)
+                .size_limit(parser.regex_compiled_size_limit)
+                .dfa_size_limit(parser.regex_dfa_size_limit)
+                .build()
+        }
+        pub fn regex_match(regex: &ExtRegex, text: &[u8]) -> bool {
+            regex.is_match(text)
+        }
+    }
+}
 
 /// Wrapper around [`regex::bytes::Regex`]
 #[derive(Clone)]
 pub struct Regex {
-    compiled_regex: Arc<regex::bytes::Regex>,
+    compiled_regex: Arc<ExtRegex>,
     format: RegexFormat,
 }
 
@@ -48,12 +117,7 @@ impl Regex {
             return Ok(regex.clone());
         }
 
-        let compiled_regex = ::regex::bytes::RegexBuilder::new(pattern)
-            .unicode(false)
-            .size_limit(parser.regex_compiled_size_limit)
-            .dfa_size_limit(parser.regex_dfa_size_limit)
-            .build()?;
-
+        let compiled_regex = regex_build(pattern, parser)?;
         let regex = Self {
             compiled_regex: Arc::from(compiled_regex),
             format,
@@ -67,7 +131,7 @@ impl Regex {
 impl Regex {
     /// Returns true if and only if the regex matches the string given.
     pub fn is_match(&self, text: &[u8]) -> bool {
-        self.compiled_regex.is_match(text)
+        regex_match(&self.compiled_regex, text)
     }
 
     /// Returns the original string of this regex.

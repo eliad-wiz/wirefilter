@@ -27,6 +27,7 @@ fnv.workspace = true
 memmem.workspace = true
 rand.workspace = true
 regex = { workspace = true, optional = true }
+pcre2 = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sliceslice.workspace = true
@@ -38,6 +39,7 @@ criterion.workspace = true
 indoc.workspace = true
 
 [features]
-default = [ "regex_pool" ]
+default = [ "regex_pcre2" ]
 regex_regular = [ "regex" ]
 regex_pool = [ "regex" ]
+regex_pcre2 = [ "regex_pool", "pcre2" ]
