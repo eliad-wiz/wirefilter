@@ -9,12 +9,9 @@ use std::{
 };
 
 cfg_if! {
-    if #[cfg(feature = "regex_regular")] {
+    if #[cfg(feature = "regex")] {
         mod imp_real;
         pub use self::imp_real::*;
-    } else if #[cfg(feature = "regex_pool")] {
-        mod imp_pool;
-        pub use self::imp_pool::*;
     } else {
         mod imp_stub;
         pub use self::imp_stub::*;

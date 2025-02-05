@@ -96,13 +96,28 @@ impl Display for ParseError<'_> {
     }
 }
 
+/// A trait representing a matcher that can check for a match on some text.
+pub trait GenericRegexMatcher: Send + Sync {
+    /// Returns true if the given text matches the regex associated with this matcher.
+    fn is_match(&self, text: &[u8]) -> bool;
+
+    /// Returns the original pattern
+    fn as_str(&self) -> &str;
+}
+
+/// A trait for a regex searcher (or builder) that can add patterns and return a matcher.
+pub trait GenericRegexBuilder {
+    /// Adds a pattern and returns a matcher referring to that pattern.
+    fn build_pattern(&self, pattern: &str) -> Option<Box<dyn GenericRegexMatcher>>;
+}
+
 /// A structure used to drive parsing of an expression into a [`FilterAst`].
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FilterParser<'s> {
     pub(crate) scheme: &'s Scheme,
     pub(crate) regex_dfa_size_limit: usize,
     pub(crate) regex_compiled_size_limit: usize,
     pub(crate) wildcard_star_limit: usize,
+    pub(crate) gen_regex_builder: Option<Box<dyn GenericRegexBuilder>>,
 }
 
 impl<'s> FilterParser<'s> {
@@ -116,6 +131,7 @@ impl<'s> FilterParser<'s> {
             // Default value extracted from the regex crate.
             regex_dfa_size_limit: 2 * (1 << 20),
             wildcard_star_limit: usize::MAX,
+            gen_regex_builder: None,
         }
     }
 
@@ -141,6 +157,12 @@ impl<'s> FilterParser<'s> {
     /// Parses a value expression into an AST form.
     pub fn parse_value<'i>(&self, input: &'i str) -> Result<FilterValueAst<'s>, ParseError<'i>> {
         complete(self.lex_as(input.trim())).map_err(|err| ParseError::new(input, err))
+    }
+
+    /// Set a custom regex searcher
+    #[inline]
+    pub fn regex_set_generic_builder(&mut self, gen_regex_builder: Box<dyn GenericRegexBuilder>) {
+        self.gen_regex_builder = Some(gen_regex_builder);
     }
 
     /// Set the approximate size limit of the compiled regular expression.

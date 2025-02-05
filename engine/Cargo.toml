@@ -38,6 +38,4 @@ criterion.workspace = true
 indoc.workspace = true
 
 [features]
-default = [ "regex_pool" ]
-regex_regular = [ "regex" ]
-regex_pool = [ "regex" ]
+default = [ "regex" ]
