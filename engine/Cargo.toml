@@ -40,4 +40,5 @@ indoc.workspace = true
 
 [features]
 default = [ "std" ]
-std = [ "dep:regex", "dep:backtrace", "dep:rand" ]
+regex = [ ]
+std = [ "regex", "dep:regex", "dep:backtrace", "dep:rand" ]

@@ -5,12 +5,10 @@ mod int;
 mod ip;
 mod list;
 mod map;
-#[cfg(feature = "std")]
 mod regex;
 mod ulong;
 mod wildcard;
 
-#[cfg(feature = "std")]
 pub use self::regex::{Error as RegexError, Regex, RegexFormat};
 pub use self::{
     array::UninhabitedArray,

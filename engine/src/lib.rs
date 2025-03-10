@@ -93,6 +93,11 @@ mod searcher;
 mod strict_partial_ord;
 mod types;
 
+#[cfg(feature = "std")]
+pub use self::panic::{
+    catch_panic, panic_catcher_disable, panic_catcher_enable, panic_catcher_get_backtrace,
+    panic_catcher_set_fallback_mode, panic_catcher_set_hook, PanicCatcherFallbackMode,
+};
 pub use self::{
     ast::{
         field_expr::{ComparisonExpr, ComparisonOpExpr, IdentifierExpr, IntOp, OrderingOp},
@@ -121,7 +126,10 @@ pub use self::{
     list_matcher::{
         AlwaysList, AlwaysListMatcher, ListDefinition, ListMatcher, NeverList, NeverListMatcher,
     },
-    rhs_types::{Bytes, BytesFormat, ExplicitIpRange, IntRange, IpCidr, IpRange},
+    rhs_types::{
+        Bytes, BytesFormat, ExplicitIpRange, IntRange, IpCidr, IpRange, Regex, RegexError,
+        RegexFormat,
+    },
     scheme::{
         Field, FieldIndex, FieldRedefinitionError, Function, FunctionRedefinitionError, Identifier,
         IdentifierRedefinitionError, IndexAccessError, List, Scheme, SchemeMismatchError,
@@ -131,12 +139,4 @@ pub use self::{
         CompoundType, ExpectedType, ExpectedTypeList, GetType, LhsValue, LhsValueMut, RhsValue,
         RhsValues, Type, TypeMismatchError,
     },
-};
-#[cfg(feature = "std")]
-pub use self::{
-    panic::{
-        catch_panic, panic_catcher_disable, panic_catcher_enable, panic_catcher_get_backtrace,
-        panic_catcher_set_fallback_mode, panic_catcher_set_hook, PanicCatcherFallbackMode,
-    },
-    rhs_types::{Regex, RegexError, RegexFormat},
 };

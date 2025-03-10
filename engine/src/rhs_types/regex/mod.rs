@@ -1,15 +1,16 @@
 use crate::lex::{span, LexErrorKind, LexResult, LexWith};
+use crate::prelude::*;
 use crate::rhs_types::bytes::lex_raw_string_as_str;
 use crate::FilterParser;
 use cfg_if::cfg_if;
-use serde::{Serialize, Serializer};
-use std::{
+use core::{
     fmt::{self, Debug, Formatter},
     hash::{Hash, Hasher},
 };
+use serde::{Serialize, Serializer};
 
 cfg_if! {
-    if #[cfg(feature = "std")] {
+    if #[cfg(feature = "regex")] {
         mod imp_real;
         pub use self::imp_real::*;
     } else {

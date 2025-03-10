@@ -1,9 +1,14 @@
-use crate::{FilterParser, GenericRegexMatcher, RegexFormat};
-use std::fmt::{self, Debug, Formatter};
-use std::hash::{Hash, Hasher};
-use std::sync::Arc;
+use crate::{prelude::*, FilterParser, GenericRegexMatcher, RegexFormat};
+use alloc::sync::Arc;
 use thiserror::Error;
 
+#[cfg(feature = "std")]
+use std::{
+    fmt::{self, Debug, Formatter},
+    hash::{Hash, Hasher},
+};
+
+#[cfg(feature = "std")]
 pub use regex::Error as RegexError;
 
 /// Gen Regex errors
@@ -17,17 +22,20 @@ pub enum Error {
     },
 
     /// Error in case custom matcher is not set and we are using the RegexPool
+    #[cfg(feature = "std")]
     #[error("Regex error")]
     SimpleRegexErr(#[from] RegexError),
 }
 
 /// Wrapper around [`regex::bytes::Regex`]
+#[cfg(feature = "std")]
 #[derive(Clone)]
 pub struct SimpleRegex {
     compiled_regex: regex::bytes::Regex,
     format: RegexFormat,
 }
 
+#[cfg(feature = "std")]
 impl SimpleRegex {
     /// Compiles a regular expression.
     pub fn new(
@@ -62,26 +70,31 @@ impl SimpleRegex {
     }
 }
 
+#[cfg(feature = "std")]
 impl PartialEq for SimpleRegex {
     fn eq(&self, other: &SimpleRegex) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
+#[cfg(feature = "std")]
 impl Eq for SimpleRegex {}
 
+#[cfg(feature = "std")]
 impl Hash for SimpleRegex {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.as_str().hash(state);
     }
 }
 
+#[cfg(feature = "std")]
 impl From<SimpleRegex> for regex::bytes::Regex {
     fn from(regex: SimpleRegex) -> Self {
         regex.compiled_regex
     }
 }
 
+#[cfg(feature = "std")]
 impl Debug for SimpleRegex {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
@@ -103,6 +116,7 @@ pub enum Regex {
     /// Custom matcher type
     Gen(GenRegex),
     /// Default Regex matcher
+    #[cfg(feature = "std")]
     Simple(SimpleRegex),
 }
 
@@ -113,9 +127,19 @@ impl Regex {
         format: RegexFormat,
         parser: &FilterParser<'_>,
     ) -> Result<Self, Error> {
-        let Some(re_builder) = parser.gen_regex_builder.as_ref() else {
-            let simple_re = SimpleRegex::new(pattern, format, parser)?;
-            return Ok(Self::Simple(simple_re));
+        let re_builder = match parser.gen_regex_builder.as_ref() {
+            Some(builder) => builder,
+            #[cfg(feature = "std")]
+            None => {
+                let simple_re = SimpleRegex::new(pattern, format, parser)?;
+                return Ok(Self::Simple(simple_re));
+            }
+            #[cfg(not(feature = "std"))]
+            None => {
+                return Err(Error::UnsupportedPattern {
+                    pattern: pattern.to_string(),
+                })
+            }
         };
 
         let Some(matcher) = re_builder.build_pattern(pattern) else {
@@ -134,6 +158,7 @@ impl Regex {
     pub fn is_match(&self, text: &[u8]) -> bool {
         match self {
             Self::Gen(r) => r.matcher.as_ref().is_match(text),
+            #[cfg(feature = "std")]
             Self::Simple(r) => r.is_match(text),
         }
     }
@@ -142,6 +167,7 @@ impl Regex {
     pub fn as_str(&self) -> &str {
         match self {
             Self::Gen(r) => r.matcher.as_ref().as_str(),
+            #[cfg(feature = "std")]
             Self::Simple(r) => r.as_str(),
         }
     }
@@ -150,6 +176,7 @@ impl Regex {
     pub fn format(&self) -> RegexFormat {
         match self {
             Self::Gen(r) => r.format,
+            #[cfg(feature = "std")]
             Self::Simple(r) => r.format(),
         }
     }

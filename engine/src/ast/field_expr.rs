@@ -4,7 +4,6 @@ use super::{
     visitor::{Visitor, VisitorMut},
     Expr,
 };
-#[cfg(feature = "std")]
 use crate::rhs_types::Regex;
 use crate::{
     ast::index_expr::IndexExpr,
@@ -104,14 +103,6 @@ lex_enum!(
     }
 );
 
-#[cfg(not(feature = "std"))]
-lex_enum!(BytesOp {
-    "contains" => Contains,
-    "wildcard" => Wildcard,
-    "strict wildcard" => StrictWildcard,
-});
-
-#[cfg(feature = "std")]
 lex_enum!(BytesOp {
     "contains" => Contains,
     "~" | "matches" => Matches,
@@ -163,7 +154,6 @@ pub enum ComparisonOpExpr<'s> {
     Contains(Bytes),
 
     /// "matches / ~" comparison
-    #[cfg(feature = "std")]
     #[serde(serialize_with = "serialize_matches")]
     Matches(Regex),
 
@@ -218,7 +208,6 @@ fn serialize_contains<S: Serializer>(rhs: &Bytes, ser: S) -> Result<S::Ok, S::Er
     serialize_op_rhs("Contains", rhs, ser)
 }
 
-#[cfg(feature = "std")]
 fn serialize_matches<S: Serializer>(rhs: &Regex, ser: S) -> Result<S::Ok, S::Error> {
     serialize_op_rhs("Matches", rhs, ser)
 }
@@ -393,7 +382,6 @@ impl<'s> ComparisonExpr<'s> {
                         let (bytes, input) = Bytes::lex(input)?;
                         (ComparisonOpExpr::Contains(bytes), input)
                     }
-                    #[cfg(feature = "std")]
                     BytesOp::Matches => {
                         let (regex, input) = Regex::lex_with(input, parser)?;
                         (ComparisonOpExpr::Matches(regex), input)
@@ -618,7 +606,6 @@ impl<'s> Expr<'s> for ComparisonExpr<'s> {
 
                 search!(TwoWaySearcher::new(bytes))
             }
-            #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), feature = "std"))]
             ComparisonOpExpr::Matches(regex) => {
                 lhs.compile_with(compiler, false, move |x, _ctx| {
                     regex.is_match(cast_value!(x, Bytes))

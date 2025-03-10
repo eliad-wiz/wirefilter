@@ -1,4 +1,3 @@
-#[cfg(feature = "std")]
 use crate::rhs_types::RegexError;
 use crate::{
     functions::{FunctionArgInvalidConstantError, FunctionArgKindMismatchError},
@@ -38,7 +37,6 @@ pub enum LexErrorKind {
     ParseNetwork(#[source] NetworkParseError),
 
     /// Expected the next token to be a regular expression
-    #[cfg(feature = "std")]
     #[error("{0}")]
     ParseRegex(#[source] RegexError),
 
