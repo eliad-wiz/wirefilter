@@ -854,7 +854,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "sliceslice"
 version = "0.4.3"
-source = "git+https://github.com/arilou/sliceslice-rs.git?branch=no_std#343badfcaf7f08689f7d1f98af45505508e9c964"
+source = "git+https://github.com/arilou/sliceslice-rs.git?branch=wiz#06900d8afa0add62b7311b51112c7d692bf62190"
 dependencies = [
  "cfg-if",
  "memchr",
