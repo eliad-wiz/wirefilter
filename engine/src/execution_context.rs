@@ -40,8 +40,8 @@ pub struct InvalidListMatcherError {
 #[derive(Debug, PartialEq)]
 pub struct ExecutionContext<'e, U = ()> {
     scheme: &'e Scheme,
-    values: Box<[Option<LhsValue<'e>>]>,
-    list_matchers: Box<[Box<dyn ListMatcher>]>,
+    values: Vec<Option<LhsValue<'e>>>,
+    list_matchers: Vec<Box<dyn ListMatcher>>,
     user_data: U,
 }
 
@@ -62,7 +62,7 @@ impl<'e, U> ExecutionContext<'e, U> {
     pub fn new_with<'s: 'e>(scheme: &'s Scheme, f: impl FnOnce() -> U) -> Self {
         ExecutionContext {
             scheme,
-            values: vec![None; scheme.field_count()].into(),
+            values: vec![None; scheme.field_count()],
             list_matchers: scheme
                 .lists()
                 .map(|list| list.definition().new_matcher())
@@ -165,7 +165,13 @@ impl<'e, U> ExecutionContext<'e, U> {
 
     /// Temporarily borrow all values and list data into a new [`ExecutionContext`].
     #[inline]
-    pub fn borrow_with<T>(&mut self, user_data: T) -> ExecutionContextGuard<'_, 'e, U, T> {
+    pub fn borrow_with<'a, 'ne, T>(
+        &'a mut self,
+        user_data: T,
+    ) -> ExecutionContextGuard<'a, 'e, 'ne, U, T>
+    where
+        'e: 'ne,
+    {
         ExecutionContextGuard::new(self, user_data)
     }
 
@@ -183,12 +189,15 @@ impl<'e, U> ExecutionContext<'e, U> {
 /// Guard over a temporarily borrowed [`ExecutionContext`].
 /// When the guard is dropped, the original [`ExecutionContext`]
 /// is restored.
-pub struct ExecutionContextGuard<'a, 'e, U, T> {
+pub struct ExecutionContextGuard<'a, 'e, 'ne, U, T> {
     old: &'a mut ExecutionContext<'e, U>,
-    new: ExecutionContext<'e, T>,
+    new: ExecutionContext<'ne, T>,
 }
 
-impl<'a, 'e, U, T> ExecutionContextGuard<'a, 'e, U, T> {
+impl<'a, 'e, 'ne, U, T> ExecutionContextGuard<'a, 'e, 'ne, U, T>
+where
+    'e: 'ne,
+{
     fn new(old: &'a mut ExecutionContext<'e, U>, user_data: T) -> Self {
         let scheme = old.scheme();
         let values = core::mem::take(&mut old.values);
@@ -205,23 +214,37 @@ impl<'a, 'e, U, T> ExecutionContextGuard<'a, 'e, U, T> {
     }
 }
 
-impl<'e, U, T> core::ops::Deref for ExecutionContextGuard<'_, 'e, U, T> {
-    type Target = ExecutionContext<'e, T>;
+impl<'ne, U, T> core::ops::Deref for ExecutionContextGuard<'_, '_, 'ne, U, T> {
+    type Target = ExecutionContext<'ne, T>;
 
     fn deref(&self) -> &Self::Target {
         &self.new
     }
 }
 
-impl<U, T> core::ops::DerefMut for ExecutionContextGuard<'_, '_, U, T> {
+impl<U, T> core::ops::DerefMut for ExecutionContextGuard<'_, '_, '_, U, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.new
     }
 }
 
-impl<U, T> Drop for ExecutionContextGuard<'_, '_, U, T> {
+impl<U, T> Drop for ExecutionContextGuard<'_, '_, '_, U, T> {
     fn drop(&mut self) {
-        self.old.values = core::mem::take(&mut self.new.values);
+        // take new values
+        let mut vec = core::mem::take(&mut self.new.values);
+        let len = vec.len();
+
+        // clear all the actual data (in order to preserve the backing storage without encountering
+        // lifetime issues)
+        vec.clear();
+        let mut converted: Vec<_> = vec.into_iter().map(|_| unreachable!()).collect();
+
+        // fill default values
+        for _ in 0..len {
+            converted.push(None);
+        }
+        self.old.values = converted;
+
         self.old.list_matchers = core::mem::take(&mut self.new.list_matchers);
     }
 }
@@ -590,4 +613,50 @@ fn test_clear() {
 
     assert_eq!(ctx.get_field_value(bool_field), None);
     assert_eq!(ctx.get_field_value(ip_field), None);
+}
+
+#[test]
+fn test_context_reuse() {
+    use crate::types::Type;
+
+    let mut scheme = Scheme::new();
+    scheme.add_field("bytes", Type::Bytes).unwrap();
+
+    let bytes_field = scheme.get_field("bytes").unwrap();
+
+    let mut ctx = ExecutionContext::<'_, ()>::new(&scheme);
+    let vec_addr = ctx.values.as_ptr();
+
+    {
+        let bla = "example.org".to_string();
+        {
+            let mut ctx = ctx.borrow_with(());
+            assert_eq!(ctx.values.as_ptr(), vec_addr);
+
+            assert_eq!(
+                ctx.set_field_value(bytes_field, bla.as_str().as_bytes()),
+                Ok(None),
+            );
+            assert_eq!(
+                ctx.get_field_value(bytes_field),
+                Some(&LhsValue::Bytes(bla.as_bytes().into()))
+            );
+        }
+        let bla = "anotherone.org".to_string();
+        {
+            let mut ctx = ctx.borrow_with(());
+            assert_eq!(ctx.values.as_ptr(), vec_addr);
+
+            assert_eq!(
+                ctx.set_field_value(bytes_field, bla.as_str().as_bytes()),
+                Ok(None),
+            );
+            assert_eq!(
+                ctx.get_field_value(bytes_field),
+                Some(&LhsValue::Bytes(bla.as_bytes().into()))
+            );
+        }
+        assert_eq!(ctx.values.as_ptr(), vec_addr);
+        assert_eq!(ctx.get_field_value(bytes_field), None);
+    }
 }
