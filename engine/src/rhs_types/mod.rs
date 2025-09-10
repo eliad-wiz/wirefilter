@@ -11,7 +11,7 @@ mod wildcard;
 
 pub use self::regex::{Error as RegexError, Regex, RegexFormat};
 pub use self::{
-    array::UninhabitedArray,
+    array::{RhsArray, UninhabitedArray},
     bool::UninhabitedBool,
     bytes::{Bytes, BytesFormat},
     int::IntRange,

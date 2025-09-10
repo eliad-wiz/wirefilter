@@ -2,9 +2,7 @@ use crate::{
     lex::{expect, skip_space, Lex, LexResult, LexWith},
     lhs_types::{Array, ArrayIterator, ArrayMut, Map, MapIter, MapMut, MapValuesIntoIter},
     prelude::*,
-    rhs_types::{
-        Bytes, IntRange, IpRange, UlongRange, UninhabitedArray, UninhabitedBool, UninhabitedMap,
-    },
+    rhs_types::{Bytes, IntRange, IpRange, RhsArray, UlongRange, UninhabitedBool, UninhabitedMap},
     scheme::{FieldIndex, IndexAccessError},
     strict_partial_ord::StrictPartialOrd,
 };
@@ -722,7 +720,19 @@ impl<'a> From<&'a RhsValue> for LhsValue<'a> {
             RhsValue::Int(integer) => LhsValue::Int(*integer),
             RhsValue::Ulong(integer) => LhsValue::Ulong(*integer),
             RhsValue::Bool(b) => match *b {},
-            RhsValue::Array(a) => match *a {},
+            RhsValue::Array(a) => {
+                // Convert RhsArray to LhsValue::Array
+                let element_type = a.element_type();
+                let lhs_values: Vec<LhsValue<'_>> = a
+                    .elements()
+                    .iter()
+                    .map(|rhs| LhsValue::from(rhs.clone()))
+                    .collect();
+
+                let array = Array::try_from_iter(element_type, lhs_values.into_iter())
+                    .expect("Failed to create array from RhsArray elements");
+                LhsValue::Array(array)
+            }
             RhsValue::Map(m) => match *m {},
         }
     }
@@ -736,7 +746,19 @@ impl From<RhsValue> for LhsValue<'_> {
             RhsValue::Int(integer) => LhsValue::Int(integer),
             RhsValue::Ulong(integer) => LhsValue::Ulong(integer),
             RhsValue::Bool(b) => match b {},
-            RhsValue::Array(a) => match a {},
+            RhsValue::Array(a) => {
+                // Convert RhsArray to LhsValue::Array
+                let element_type = a.element_type();
+                let lhs_values: Vec<LhsValue<'_>> = a
+                    .elements()
+                    .iter()
+                    .map(|rhs| LhsValue::from(rhs.clone()))
+                    .collect();
+
+                let array = Array::try_from_iter(element_type, lhs_values.into_iter())
+                    .expect("Failed to create array from RhsArray elements");
+                LhsValue::Array(array)
+            }
             RhsValue::Map(m) => match m {},
         }
     }
@@ -1155,7 +1177,7 @@ declare_types!(
     Bytes(#[serde(borrow)] Cow<'a, [u8]> | Bytes | Bytes),
 
     /// An Array of [`Type`].
-    Array[CompoundType](#[serde(skip_deserializing)] Array<'a> | UninhabitedArray | UninhabitedArray),
+    Array[CompoundType](#[serde(skip_deserializing)] Array<'a> | RhsArray | RhsArray),
 
     /// A Map of string to [`Type`].
     Map[CompoundType](#[serde(skip_deserializing)] Map<'a> | UninhabitedMap | UninhabitedMap),

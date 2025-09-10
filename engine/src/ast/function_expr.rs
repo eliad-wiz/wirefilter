@@ -138,6 +138,10 @@ impl<'i, 's> LexWith<'i, &FilterParser<'s>> for FunctionCallArgExpr<'s> {
             if c == '"' || (c == 'r' && (c2 == Some('#') || c2 == Some('"'))) {
                 return RhsValue::lex_with(input, Type::Bytes)
                     .map(|(literal, input)| (FunctionCallArgExpr::Literal(literal), input));
+            } else if c == '{' {
+                // Parse array literal as RhsValue::Array
+                return RhsValue::lex_with(input, Type::Array(Type::Int.into()))
+                    .map(|(literal, input)| (FunctionCallArgExpr::Literal(literal), input));
             } else if c == '(' || UnaryOp::lex(input).is_ok() {
                 return LogicalExpr::lex_with(input, parser)
                     .map(|(lhs, input)| (FunctionCallArgExpr::Logical(lhs), input));
@@ -579,6 +583,64 @@ mod tests {
         }
     }
 
+    fn check_order_function<'a>(args: FunctionArgs<'_, 'a>) -> Option<LhsValue<'a>> {
+        // Get the first argument (array field)
+        let arr_field = match args.next()? {
+            Ok(LhsValue::Array(arr)) => arr,
+            Err(Type::Array(_)) => return None,
+            _ => unreachable!(),
+        };
+
+        // Get the second argument (literal array/RhsValues converted to values)
+        let expected_order = match args.next()? {
+            Ok(LhsValue::Array(arr)) => {
+                // Convert Array<LhsValue> to Vec<i64>
+                let mut order_vec = Vec::new();
+                for item in arr.into_iter() {
+                    match item {
+                        LhsValue::Int(val) => order_vec.push(val),
+                        _ => return Some(LhsValue::Bool(false)), // Wrong type in array
+                    }
+                }
+                order_vec
+            }
+            Err(Type::Array(_)) => return None,
+            _ => unreachable!(),
+        };
+
+        // Convert field array to Vec<i64>
+        let mut field_values = Vec::new();
+        for item in arr_field.into_iter() {
+            match item {
+                LhsValue::Int(val) => field_values.push(val),
+                _ => return Some(LhsValue::Bool(false)), // Wrong type in field array
+            }
+        }
+
+        // Check if field_values follows the order specified in expected_order
+        let is_ordered = check_array_order(&field_values, &expected_order);
+        Some(LhsValue::Bool(is_ordered))
+    }
+
+    /// Check if the field array follows the order specified by the expected array
+    /// This checks if elements appear in the same relative order
+    fn check_array_order(field_values: &[i64], expected_order: &[i64]) -> bool {
+        if expected_order.is_empty() {
+            return true;
+        }
+
+        let mut expected_idx = 0;
+
+        for &field_val in field_values {
+            if expected_idx < expected_order.len() && field_val == expected_order[expected_idx] {
+                expected_idx += 1;
+            }
+        }
+
+        // All expected values should be found in order
+        expected_idx == expected_order.len()
+    }
+
     static SCHEME: LazyLock<Scheme> = LazyLock::new(|| {
         let mut scheme = Scheme! {
             http.headers: Map(Bytes),
@@ -586,6 +648,7 @@ mod tests {
             http.request.headers.names: Array(Bytes),
             http.request.headers.values: Array(Bytes),
             http.request.headers.is_empty: Array(Bool),
+            http.numbers: Array(Int),
             ip.addr: Ip,
             ssl: Bool,
             tcp.port: Int,
@@ -680,7 +743,70 @@ mod tests {
             )
             .unwrap();
         scheme
+            .add_function(
+                "check_order",
+                SimpleFunctionDefinition {
+                    params: vec![
+                        SimpleFunctionParam {
+                            arg_kind: FunctionArgKind::Field,
+                            val_type: Type::Array(Type::Int.into()),
+                        },
+                        SimpleFunctionParam {
+                            arg_kind: FunctionArgKind::Literal,
+                            val_type: Type::Array(Type::Int.into()),
+                        },
+                    ],
+                    opt_params: vec![],
+                    return_type: Type::Bool,
+                    implementation: SimpleFunctionImpl::new(check_order_function),
+                },
+            )
+            .unwrap();
+        scheme
     });
+
+    #[test]
+    fn test_check_order_function() {
+        use crate::execution_context::ExecutionContext;
+        use crate::lhs_types::Array;
+
+        let scheme = &*SCHEME;
+
+        // Test that function is registered
+        let func = scheme.get_function("check_order");
+        assert!(func.is_ok());
+        assert_eq!(func.unwrap().name(), "check_order");
+
+        // Test case 1: Array follows the expected order
+        let expr = scheme.parse("check_order(http.numbers, {1 2 55})").unwrap();
+        let compiled = expr.compile();
+
+        let mut ctx = ExecutionContext::new(scheme);
+
+        // Create an array field that follows the order [1, 3, 2, 55, 99]
+        let test_array = Array::from_iter([1i64, 3i64, 2i64, 55i64, 99i64]);
+        ctx.set_field_value(scheme.get_field("http.numbers").unwrap(), test_array)
+            .unwrap();
+
+        // This should return true because 1, 2, 55 appear in order (even with 3 and 99 in between)
+        let result = compiled.execute(&ctx);
+        assert_eq!(result, Ok(true));
+
+        // Test case 2: Array does not follow the expected order
+        let test_array2 = Array::from_iter([55i64, 2i64, 1i64]);
+        ctx.set_field_value(scheme.get_field("http.numbers").unwrap(), test_array2)
+            .unwrap();
+
+        // This should return false because the order is wrong (55 before 2 and 1)
+        let result2 = compiled.execute(&ctx);
+        assert_eq!(result2, Ok(false));
+
+        // Test case 3: Empty expected order (should always return true)
+        let expr3 = scheme.parse("check_order(http.numbers, {})").unwrap();
+        let compiled3 = expr3.compile();
+        let result3 = compiled3.execute(&ctx);
+        assert_eq!(result3, Ok(true));
+    }
 
     #[test]
     fn test_lex_function_call_expr() {
