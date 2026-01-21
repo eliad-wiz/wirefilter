@@ -8,17 +8,23 @@
 use crate::{
     execution_context::ExecutionContext,
     lhs_types::TypedArray,
-    prelude::*,
     scheme::{Scheme, SchemeMismatchError},
     types::{LhsValue, Type},
 };
+use alloc::sync::Arc;
 use core::fmt;
 
 type BoxedClosureToOneBool<'s, U> =
-    Box<dyn for<'e> Fn(&'e ExecutionContext<'e, U>) -> bool + Sync + Send + 's>;
+    Arc<dyn for<'e> Fn(&'e ExecutionContext<'e, U>) -> bool + Sync + Send + 's>;
 
 /// Boxed closure for [`crate::Expr`] AST node that evaluates to a simple [`bool`].
 pub struct CompiledOneExpr<'s, U = ()>(BoxedClosureToOneBool<'s, U>);
+
+impl<'s, U> Clone for CompiledOneExpr<'s, U> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
 
 impl<U> fmt::Debug for CompiledOneExpr<'_, U> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -33,7 +39,7 @@ impl<'s, U> CompiledOneExpr<'s, U> {
     pub fn new(
         closure: impl for<'e> Fn(&'e ExecutionContext<'e, U>) -> bool + Sync + Send + 's,
     ) -> Self {
-        CompiledOneExpr(Box::new(closure))
+        CompiledOneExpr(Arc::new(closure))
     }
 
     /// Executes the closure against a provided context with values.
@@ -50,10 +56,16 @@ impl<'s, U> CompiledOneExpr<'s, U> {
 pub(crate) type CompiledVecExprResult = TypedArray<'static, bool>;
 
 type BoxedClosureToVecBool<'s, U> =
-    Box<dyn for<'e> Fn(&'e ExecutionContext<'e, U>) -> CompiledVecExprResult + Sync + Send + 's>;
+    Arc<dyn for<'e> Fn(&'e ExecutionContext<'e, U>) -> CompiledVecExprResult + Sync + Send + 's>;
 
 /// Boxed closure for [`crate::Expr`] AST node that evaluates to a list of [`bool`].
 pub struct CompiledVecExpr<'s, U = ()>(BoxedClosureToVecBool<'s, U>);
+
+impl<'s, U> Clone for CompiledVecExpr<'s, U> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
 
 impl<U> fmt::Debug for CompiledVecExpr<'_, U> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -71,7 +83,7 @@ impl<'s, U> CompiledVecExpr<'s, U> {
             + Send
             + 's,
     ) -> Self {
-        CompiledVecExpr(Box::new(closure))
+        CompiledVecExpr(Arc::new(closure))
     }
 
     /// Executes the closure against a provided context with values.
@@ -92,6 +104,15 @@ pub enum CompiledExpr<'s, U = ()> {
     One(CompiledOneExpr<'s, U>),
     /// Variant for [`crate::Expr`] AST node that evaluates to a list of [`bool`].
     Vec(CompiledVecExpr<'s, U>),
+}
+
+impl<'s, U> Clone for CompiledExpr<'s, U> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::One(one) => Self::One(one.clone()),
+            Self::Vec(vec) => Self::Vec(vec.clone()),
+        }
+    }
 }
 
 impl<U> CompiledExpr<'_, U> {
@@ -130,10 +151,16 @@ impl From<Type> for CompiledValueResult<'_> {
 }
 
 type BoxedClosureToValue<'s, U> =
-    Box<dyn for<'e> Fn(&'e ExecutionContext<'e, U>) -> CompiledValueResult<'e> + Sync + Send + 's>;
+    Arc<dyn for<'e> Fn(&'e ExecutionContext<'e, U>) -> CompiledValueResult<'e> + Sync + Send + 's>;
 
 /// Boxed closure for [`crate::ValueExpr`] AST node that evaluates to an [`LhsValue`].
 pub struct CompiledValueExpr<'s, U = ()>(BoxedClosureToValue<'s, U>);
+
+impl<'s, U> Clone for CompiledValueExpr<'s, U> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
 
 impl<U> fmt::Debug for CompiledValueExpr<'_, U> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -151,7 +178,7 @@ impl<'s, U> CompiledValueExpr<'s, U> {
             + Send
             + 's,
     ) -> Self {
-        CompiledValueExpr(Box::new(closure))
+        CompiledValueExpr(Arc::new(closure))
     }
 
     /// Executes the closure against a provided context with values.
